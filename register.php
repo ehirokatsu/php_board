@@ -17,6 +17,29 @@
 
 <?php
 
+require('env.inc');
+require('imgLib.php');
+
+//プロフィール画像をアップロードしていない場合用の初期化
+$image_id = 0;
+
+
+if (isset($_SERVER['REQUEST_METHOD'])) {
+   
+    //POST以外受け付けない
+    if ($_SERVER['REQUEST_METHOD'] !== "POST") {
+        exit('アップロードが失敗しました。');
+    }
+    //保管用ディレクトリを確保
+    if (!is_dir($folder_files) && !mkdir($folder_files)) {
+        exit('保管用ディレクトリを作ることができません。');
+    }
+    
+    //画像をDBに登録して画像IDを取得する
+    $image_id = registerImg($_FILES);
+}
+
+
 $msg = "";
 $link = "";
 
@@ -47,14 +70,11 @@ if (!isset($_POST['user_name'])
     //入力パスワードをハッシュ化
     $user_pass = password_hash($_POST['user_pass'], PASSWORD_DEFAULT);
 
-    $dsn = "mysql:host=localhost; dbname=myboard";
-    $db_username = "user1";
-    $db_pass = "user1";
 
     try {
 
-        /データベースに接続する
-        $dbh = new PDO($dsn, $db_username, $db_pass);
+        //データベースに接続する
+        $dbh = new PDO($dsn, $db_username, $db_password);
         
         //エラーはCatch内で処理する
         $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -63,9 +83,9 @@ if (!isset($_POST['user_name'])
         $dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
         
         //フォームに入力されたmailがすでに登録されていないかチェック
-        $sql = "SELECT * FROM users WHERE user_mail = :mail";
+        $sql = "SELECT * FROM users WHERE user_mail = :user_mail";
         $stmt = $dbh->prepare($sql);
-        $stmt->bindValue(':mail', $_POST['user_mail'], PDO::PARAM_STR);
+        $stmt->bindValue(':user_mail', $_POST['user_mail'], PDO::PARAM_STR);
         $stmt->execute();
         
         //入力されたメールアドレスに一致する行が存在する場合
@@ -76,12 +96,14 @@ if (!isset($_POST['user_name'])
             
         } else {
             //登録されていなければinsert 
-            $sql = "INSERT INTO users(user_name, user_pass, user_mail)
-                    VALUES (:name, :pass, :mail)";
+            $sql = "INSERT INTO users(user_name, user_pass, user_mail, user_image_id)
+                    VALUES (:user_name, :user_pass, :user_mail, :user_image_id)";
             $stmt = $dbh->prepare($sql);
-            $stmt->bindValue(':name', $_POST['user_name'], PDO::PARAM_STR);
-            $stmt->bindValue(':pass', $user_pass, PDO::PARAM_STR);
-            $stmt->bindValue(':mail', $_POST['user_mail'], PDO::PARAM_STR);
+            $stmt->bindValue(':user_name', $_POST['user_name'], PDO::PARAM_STR);
+            $stmt->bindValue(':user_pass', $user_pass, PDO::PARAM_STR);
+            $stmt->bindValue(':user_mail', $_POST['user_mail'], PDO::PARAM_STR);
+            $stmt->bindValue(':user_image_id', $image_id, PDO::PARAM_INT);
+
             $stmt->execute();
             
             $msg = '会員登録が完了しました';

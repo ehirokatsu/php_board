@@ -15,7 +15,7 @@
 </H1>
 
 
-<form action="register.php" method="post" name="register">
+<form action="register.php" method="post" name="register" enctype="multipart/form-data">
     <label for="user_name">名前：</label>
     <input type="text" id="user_name" name="user_name" required>
     <br>
@@ -28,6 +28,9 @@
     <input type="text" id="user_pass" name="user_pass" required>
     <br>
     <br>
+    <input type="hidden" name="MAX_FILE_SIZE" value="1000000">
+    新しいファイル：<input type="file" name="yourfile">
+    (1M以内)<br>
     <input type="submit" value="新規登録">
     <br>
 </form>
