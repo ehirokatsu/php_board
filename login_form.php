@@ -17,7 +17,15 @@
 
 <?php
 
-$msg = "";
+require_once( dirname(__FILE__). '/env.inc');
+
+//データベース関数を使用する
+require_once( dirname(__FILE__). '/DbLib.php');
+$dbLib = new DbLib();
+
+
+
+$msg = '';
 
 //入力されたメールアドレスとパスワードがNULL
 if (!isset($_POST['user_mail']) || !isset($_POST['user_pass'])) {
@@ -38,43 +46,31 @@ if (!isset($_POST['user_mail']) || !isset($_POST['user_pass'])) {
 
     session_start();
     
-    $dsn = "mysql:host=localhost; dbname=myboard;";
-    $db_username = "user1";
-    $db_pass = "user1";
-    
+
     try {
-        //データベースに接続する
-        $dbh = new PDO($dsn, $db_username, $db_pass);
-        
-        //エラーはCatch内で処理する
-        $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        
-        //サーバサイドのプリペアドステートメントを有効にする
-        $dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
     
-        //入力されたメールアドレスを検索する
-        $sql = "SELECT * FROM users WHERE user_mail = :user_mail";
-        $stmt = $dbh->prepare($sql);
-        $stmt->bindValue(':user_mail', $_POST['user_mail'], PDO::PARAM_STR);
-        $stmt->execute();
+        //メールアドレスからusersテーブルを検索した結果を取得する
+        $result_all = $dbLib->getUsersFromMail($_POST['user_mail']);
         
         //入力されたメールアドレスに一致する行が存在する場合
-        if ($member = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            //入力されたパスワードが正しい場合
-            if (password_verify($_POST['user_pass'], $member['user_pass'])) {
-            
-                //DBのユーザー情報をセッションに保存
-                $_SESSION['user_id'] = $member['user_id'];
-                $_SESSION['user_name'] = $member['user_name'];
-                
-                $msg = 'ログインしました。';
-                
-                //掲示板に遷移する
-                header("Location:index.php");
-                exit();
-                
-            } else {
-                $msg = 'パスワードが間違っています。';
+        if (!empty($result_all)) {
+        
+            foreach ($result_all as $result) {
+                //入力されたパスワードが正しい場合
+                if (password_verify($_POST['user_pass'], $result['user_pass'])) {
+                    //DBのユーザー情報をセッションに保存
+                    $_SESSION['user_id'] = $result['user_id'];
+                    $_SESSION['user_name'] = $result['user_name'];
+                    
+                    $msg = 'ログインしました。';
+                    
+                    //掲示板に遷移する
+                    header("Location:index.php");
+                    exit();
+                    
+                } else {
+                    $msg = 'パスワードが間違っています。';
+                }
             }
         } else {
             $msg = 'メールアドレスが間違っています。';
