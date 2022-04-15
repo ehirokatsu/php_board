@@ -17,7 +17,6 @@
 
 <?php
 
-
 require_once( dirname(__FILE__). '/env.inc');
 
 //画像関数を使用する
@@ -28,7 +27,7 @@ $imgLib = new ImgLib();
 require_once( dirname(__FILE__). '/DbLib.php');
 $dbLib = new DbLib();
 
-//プロフィール画像をアップロードしていない場合用の初期化
+//プロフィール画像をアップロードしていない場合の初期化用
 $image_id = 0;
 
 
@@ -38,12 +37,13 @@ if (isset($_SERVER['REQUEST_METHOD'])) {
     if ($_SERVER['REQUEST_METHOD'] !== "POST") {
         exit('アップロードが失敗しました。');
     }
+    
     //保管用ディレクトリを確保
     if (!is_dir($folder_files) && !mkdir($folder_files)) {
         exit('保管用ディレクトリを作ることができません。');
     }
-        
-    //画像をDBに登録して画像IDを取得する
+    
+    //アップロードされた画像をDBに登録して画像IDを取得する
     $image_id = $imgLib->registerImg($_FILES);
     
 }
@@ -78,7 +78,6 @@ if (!isset($_POST['user_name'])
     //入力パスワードをハッシュ化
     $user_pass = password_hash($_POST['user_pass'], PASSWORD_DEFAULT);
 
-
     try {
 
         //メールアドレスからusersテーブルを検索した結果を取得する
@@ -96,7 +95,7 @@ if (!isset($_POST['user_name'])
             $dbh = $dbLib->connectDb();
             
             
-            //登録されていなければinsert 
+            //登録されていなければinsert  
             $sql = "INSERT INTO users(user_name, user_pass, user_mail, user_image_id)
                     VALUES (:user_name, :user_pass, :user_mail, :user_image_id)";
             $stmt = $dbh->prepare($sql);

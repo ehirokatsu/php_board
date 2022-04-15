@@ -71,8 +71,8 @@ try {
 }
 
 foreach ($result_all as $result) {
-    $image_id = $result['image_id'];
-    $imgLib->showImgFromImageID($image_id);
+    $user_image_id = $result['image_id'];
+    $imgLib->showImgFromImageID($user_image_id);
 }
 
 
@@ -299,8 +299,10 @@ try {
                     echo '<table border="1">';
                     echo '<tr>';
                     echo '<th>';
-                    print('返信投稿者ID：'.$result2['reply_post_id'].'<br>');
+                    $imgLib->showImgFromImageID($user_image_id);
+                    //print('返信投稿者ID：'.$result2['reply_post_id'].'<br>');
                     print('返信投稿者名：'.$result2['user_name'].'<br>');
+                    
                     echo '</th>';
                     echo '</tr>';
 

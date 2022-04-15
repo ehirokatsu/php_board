@@ -1,59 +1,79 @@
 <?php
 
 //共通設定を取得する
-require('env.inc');
+require_once( dirname(__FILE__). '/env.inc');
 
-//パラメータを受け取る
-$fid = $_REQUEST['fid'];
-if ($fid == "" || !is_numeric($fid) || $fid <= 0) {
-    exit();
+//データベース関数を使用する
+require_once( dirname(__FILE__). '/DbLib.php');
+$dbLib = new DbLib();
+
+//画像IDパラメータのチェック
+if (empty($_REQUEST['image_id'])
+ || !is_numeric($_REQUEST['image_id'])
+ || $_REQUEST['image_id'] <= 0) {
+ 
+    exit('不正なパラメータを受信しました。');
+    
+} else {
+
+    //パラメータを受け取る
+    $image_id = $_REQUEST['image_id'];
+
 }
 
-$th = "";//初期化しないと画像表示できない
-if (!empty($_REQUEST['th'])) {
+if (empty($_REQUEST['th']) || !is_string($_REQUEST['th'])) {
+ 
+    //このパラメータが無い場合は使用しないので初期化する
+    $th = "";
+    
+} else {
+
+    //パラメータを受け取る
     $th = $_REQUEST['th'];
+    
 }
 
 //ファイル情報をデータベースから取得
 try {
-    //データベースに接続する
-    $dbh = new PDO($dsn, $db_username, $db_password);
-    
-    //エラーはCatch内で処理する
-    $dbh->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-    
-    //サーバサイドのプリペアドステートメントを有効にする
-    $dbh->setAttribute(PDO::ATTR_EMULATE_PREPARES, false);
+
+    //データベース接続処理
+    $dbh = $dbLib->connectDb();
 
     //選択した画像データのファイル名から拡張子とMIMEを取得する
-    $sql = "select image_ext, image_type from images where image_id=:fid";
+    $sql = "select image_ext, image_type from images where image_id=:image_id";
     $stmt = $dbh->prepare($sql);
-    $stmt->bindValue(':fid', $fid, PDO::PARAM_INT);
+    $stmt->bindValue(':image_id', $image_id, PDO::PARAM_INT);
     $stmt->execute();
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
     
-    //データベース接続を解除する
-    $dbh = null;
+    //データベース切断処理
+    $dbLib->disconnectDb($stmt, $dbh);
     
 } catch (PDOException $e) {
+
     print('Connection failed:'.$e -> getMessage());
     die();
+    
 }
-$row = $stmt->fetch(PDO::FETCH_ASSOC);
-if (!$row) {
-    exit();
+
+if (!$result) {
+
+    //画像データがDBに無ければ終了する
+    exit('選択された画像がDBにありません');
+    
 }
 
 //画像データの拡張子
-$image_ext = $row['image_ext'];
+$image_ext = $result['image_ext'];
 
 //画像データのMIMEタイプ
-$image_type = $row['image_type'];
+$image_type = $result['image_type'];
 
 //画像データのパス名
-$fpath = "$folder_files/$fid.$image_ext";
+$fpath = "$folder_files/$image_id.$image_ext";
 
 //サムネイル画像のパス名
-$tpath = "$folder_thumbs/$fid.$image_ext";
+$tpath = "$folder_thumbs/$image_id.$image_ext";
 
 //画像データのパス名が存在する
 if (is_file($fpath)) {

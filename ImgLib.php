@@ -46,23 +46,26 @@ class ImgLib
 
         foreach ($result_all as $result) {
             
-            //各列の値を変数に取り出す
+            //画像ID
             $image_id = $result['image_id'];
-            $image_ext = $result['image_ext'];
-            $image_type = $result['image_type'];
-            $image_name = $result['image_name'];
-            $image_date = $result['image_date'];
             
-            //ファイルのパス名を決定
+            //画像の拡張子
+            $image_ext = $result['image_ext'];
+            
+            //ファイル名を定義する（ID＋拡張子にする）
             $bname = "$image_id.$image_ext";
+            
+            //画像のフルパス
             $fpath = "$folder_files/$image_id.$image_ext";
+            
+            //サムネイル画像のフルパス
             $tpath = "$folder_thumbs/$image_id.$image_ext";
             
             //ファイルのURLを決定
-            $furl = "/board/fshow.php?fid=$image_id";
-            $turl = "/board/fshow.php?fid=$image_id&th=y";
-            //表示
+            $furl = "/board/fshow.php?image_id=$image_id";
+            $turl = "/board/fshow.php?image_id=$image_id&th=y";
             
+            //表示する
             if (is_file($fpath)) {
             
                 echo "<a href=\"$furl\">";
@@ -73,8 +76,12 @@ class ImgLib
                     echo "<br>";
                 }
                 echo "</a>";
+                
             } else {
+            
+                //画像ファイルが無い場合に表示する
                 echo "(removed)";
+                
             }
         }
 
