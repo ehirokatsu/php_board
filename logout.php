@@ -3,7 +3,7 @@
 <html xmlns="http:// www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
 <head>
 <meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />
-<title>ログイン</title>
+<title>ログアウト</title>
 <link rel="stylesheet" type="text/css" href="style.css">
 </head>
 <body>
@@ -11,7 +11,7 @@
 <br>
 <div class="center">
 <H1>
-<font color="blue">ログイン</font>
+ログアウト
 </H1>
 
 <?php

@@ -25,143 +25,85 @@ $imgLib = new ImgLib();
 require_once( dirname(__FILE__). '/DbLib.php');
 $dbLib = new DbLib();
 
-
-
+//現在日時を取得する
 date_default_timezone_set('Asia/Tokyo');
 $today = date("Y-m-d H:i:s");
 
-
+//セッションを開始
 session_start();
-$user_name = $_SESSION['user_name'];
 
-if (isset($_SESSION['user_id'])) {//ログインしているとき
-    $msg = 'ユーザー：' . htmlspecialchars($user_name, \ENT_QUOTES, 'UTF-8');
+//ログインしているとき
+if (isset($_SESSION['user_id'])) {
+
+    $user_name = $_SESSION['user_name'];
+    $msg = htmlspecialchars($user_name, \ENT_QUOTES, 'UTF-8');
     $link = '<a href="logout.php">ログアウト</a>';
-} else {//ログインしていない時
-    $msg = 'ログインしていません';
-    $link = '<a href="login.php">ログイン</a>';
-    exit();
-}
-
-
-//ファイル情報をデータベースから取得
-try {
-
-    //データベース接続処理
-    $dbh = $dbLib->connectDb();
-
-    //一覧表示するSQL文
-    $sql = "select image_id, image_ext, image_type, image_name, image_date
-            from users, images
-            where users.user_image_id = images.image_id and user_id = :user_id";
-    $stmt = $dbh->prepare($sql);
     
-    $stmt->bindValue(':user_id', $_SESSION['user_id'], PDO::PARAM_INT);
+    //ファイル情報をデータベースから取得
+    try {
 
-    $stmt->execute();
-    
-    $result_all = $stmt->fetchAll();
-    
-    //データベース切断処理
-    $dbLib->disconnectDb($stmt, $dbh);
-    
-} catch (PDOException $e) {
-    print('Connection failed:'.$e -> getMessage());
-    die();
-}
+        //データベース接続処理
+        $dbh = $dbLib->connectDb();
 
-foreach ($result_all as $result) {
-    $user_image_id = $result['image_id'];
-    $imgLib->showImgFromImageID($user_image_id);
-}
-
-
-echo '<br>';
-echo $msg;
-echo '<br>';
-echo $link;
-echo '<br>';
-echo '<br>';
-
-
-try {
-    //データベース接続処理
-    $dbh = $dbLib->connectDb();
-
-    //ログインしているユーザのuser_idを取得する
-    $sql = "SELECT user_id FROM users WHERE user_name = :name";
-    $stmt = $dbh->prepare($sql);
-    $stmt->bindValue(':name', $user_name, PDO::PARAM_STR);
-    $stmt->execute();
-    $user_id = $stmt->fetch(PDO::FETCH_ASSOC);
-
-
-    //削除ボタンが押下された場合
-    if (isset($_POST['delete']) && is_string($_POST['delete'])) {
-
-        //投稿テーブルから投稿内容を削除する
-        $dbLib->deletePost('bulletinboard', (int)$_POST['delete']);
-
-    }
-    if (isset($_POST['delete_com']) && is_string($_POST['delete_com'])) {
-
-        //返信テーブルから返信内容を削除する
-        $dbLib->deletePost('replyboard', (int)$_POST['delete_com']);
-
-    }
-
-    //返信にチェックが入っていた場合
-    $src_post_id = NULL;
-
-    if (!empty($_POST['reply'])) {
-    
-        //画像があれば登録する
-        $image_id = 0;
-        
-        if (isset($_SERVER['REQUEST_METHOD'])) {
-
-            //POST以外受け付けない
-            if ($_SERVER['REQUEST_METHOD'] !== "POST") {
-                exit('アップロードが失敗しました。');
-            }
-            //保管用ディレクトリを確保
-            if (!is_dir($folder_files) && !mkdir($folder_files)) {
-                exit('保管用ディレクトリを作ることができません。');
-            }
-            
-            //画像をDBに登録して画像IDを取得する
-            $image_id = $imgLib->registerImg($_FILES);
-        }
-        
-        $src_post_id = (int)$_POST['reply'];
-
-        //元投稿のリプライフラグをONにする
-        $sql = 'update bulletinboard set reply_flag = true where post_id = :post_id';
-
+        //一覧表示するSQL文
+        $sql = "select image_id, image_ext, image_type, image_name, image_date
+                from users, images
+                where users.user_image_id = images.image_id and user_id = :user_id";
         $stmt = $dbh->prepare($sql);
-        $stmt->bindValue(':post_id', $src_post_id, PDO::PARAM_INT);
-        $stmt->execute();
-
-        //投稿内容をリプライ用テーブルにinsertする
-        if (isset($_POST['post_text']) && !empty($_POST['post_text'])) {
-            //投稿内容をinsert
-            $sql = 'insert into replyboard
-             (send_date, post_text, post_image_id, send_user_id, src_post_id)
-             values (:date, :post_text, :post_image_id, :send_user_id, :src_post_id)';
-
-            $stmt = $dbh->prepare($sql);
-            $stmt->bindValue(':date', $today);
-            $stmt->bindValue(':post_text', $_POST['post_text'], PDO::PARAM_STR);            $stmt->bindValue(':post_image_id', $image_id, PDO::PARAM_INT);
-            $stmt->bindValue(':send_user_id', $user_id['user_id'], PDO::PARAM_INT);
-            $stmt->bindValue(':src_post_id', $src_post_id, PDO::PARAM_INT);
-            $stmt->execute();
-        }
-    } else {
-
-        //画像があれば登録する
-        $image_id = 0;
         
-        if (!empty($_FILES)) {
+        $stmt->bindValue(':user_id', $_SESSION['user_id'], PDO::PARAM_INT);
+
+        $stmt->execute();
+        
+        $result_all = $stmt->fetchAll();
+        
+        //データベース切断処理
+        $dbLib->disconnectDb($stmt, $dbh);
+        
+    } catch (PDOException $e) {
+        print('Connection failed:'.$e -> getMessage());
+        die();
+    }
+
+    foreach ($result_all as $result) {
+        $user_image_id = $result['image_id'];
+        $imgInfo = $imgLib->showImgFromImageID($user_image_id);
+    }
+
+    try {
+        //データベース接続処理
+        $dbh = $dbLib->connectDb();
+
+        //ログインしているユーザのuser_idを取得する
+        $sql = "SELECT user_id FROM users WHERE user_name = :name";
+        $stmt = $dbh->prepare($sql);
+        $stmt->bindValue(':name', $user_name, PDO::PARAM_STR);
+        $stmt->execute();
+        $user_id = $stmt->fetch(PDO::FETCH_ASSOC);
+
+
+        //削除ボタンが押下された場合
+        if (isset($_POST['delete']) && is_string($_POST['delete'])) {
+
+            //投稿テーブルから投稿内容を削除する
+            $dbLib->deletePost('bulletinboard', (int)$_POST['delete']);
+
+        }
+        if (isset($_POST['delete_com']) && is_string($_POST['delete_com'])) {
+
+            //返信テーブルから返信内容を削除する
+            $dbLib->deletePost('replyboard', (int)$_POST['delete_com']);
+
+        }
+
+        //返信にチェックが入っていた場合
+        $src_post_id = NULL;
+
+        if (!empty($_POST['reply'])) {
+        
+            //画像があれば登録する
+            $image_id = 0;
+            
             if (isset($_SERVER['REQUEST_METHOD'])) {
 
                 //POST以外受け付けない
@@ -176,58 +118,138 @@ try {
                 //画像をDBに登録して画像IDを取得する
                 $image_id = $imgLib->registerImg($_FILES);
             }
-        }
+            
+            $src_post_id = (int)$_POST['reply'];
 
+            //元投稿のリプライフラグをONにする
+            $sql = 'update bulletinboard set reply_flag = true where post_id = :post_id';
 
-        if (isset($_POST['post_text']) && !empty($_POST['post_text'])) {
-
-            echo $image_id;
-            //投稿内容をinsert
-            $sql = 'INSERT INTO bulletinboard
-                   (send_date, post_text, post_image_id, send_user_id,reply_flag)
-             VALUES (:date, :post_text, :post_image_id, :send_user_id, false)';
             $stmt = $dbh->prepare($sql);
-            $stmt->bindValue(':date', $today, PDO::PARAM_STR);
-            $stmt->bindValue(':post_text', $_POST['post_text'], PDO::PARAM_STR);            $stmt->bindValue(':post_image_id', $image_id, PDO::PARAM_INT);
-            $stmt->bindValue(':send_user_id', $user_id['user_id'], PDO::PARAM_INT);
+            $stmt->bindValue(':post_id', $src_post_id, PDO::PARAM_INT);
             $stmt->execute();
+
+            //投稿内容をリプライ用テーブルにinsertする
+            if (isset($_POST['post_text']) && !empty($_POST['post_text'])) {
+                //投稿内容をinsert
+                $sql = 'insert into replyboard
+                 (send_date, post_text, post_image_id, send_user_id, src_post_id)
+                 values (:date, :post_text, :post_image_id, :send_user_id, :src_post_id)';
+
+                $stmt = $dbh->prepare($sql);
+                $stmt->bindValue(':date', $today);
+                $stmt->bindValue(':post_text', $_POST['post_text'], PDO::PARAM_STR);            $stmt->bindValue(':post_image_id', $image_id, PDO::PARAM_INT);
+                $stmt->bindValue(':send_user_id', $user_id['user_id'], PDO::PARAM_INT);
+                $stmt->bindValue(':src_post_id', $src_post_id, PDO::PARAM_INT);
+                $stmt->execute();
+            }
+        } else {
+
+            //画像があれば登録する
+            $image_id = 0;
+            
+            if (!empty($_FILES)) {
+                if (isset($_SERVER['REQUEST_METHOD'])) {
+
+                    //POST以外受け付けない
+                    if ($_SERVER['REQUEST_METHOD'] !== "POST") {
+                        exit('アップロードが失敗しました。');
+                    }
+                    //保管用ディレクトリを確保
+                    if (!is_dir($folder_files) && !mkdir($folder_files)) {
+                        exit('保管用ディレクトリを作ることができません。');
+                    }
+                    
+                    //画像をDBに登録して画像IDを取得する
+                    $image_id = $imgLib->registerImg($_FILES);
+                }
+            }
+
+
+            if (isset($_POST['post_text']) && !empty($_POST['post_text'])) {
+
+                echo $image_id;
+                //投稿内容をinsert
+                $sql = 'INSERT INTO bulletinboard
+                       (send_date, post_text, post_image_id, send_user_id,reply_flag)
+                 VALUES (:date, :post_text, :post_image_id, :send_user_id, false)';
+                $stmt = $dbh->prepare($sql);
+                $stmt->bindValue(':date', $today, PDO::PARAM_STR);
+                $stmt->bindValue(':post_text', $_POST['post_text'], PDO::PARAM_STR);            $stmt->bindValue(':post_image_id', $image_id, PDO::PARAM_INT);
+                $stmt->bindValue(':send_user_id', $user_id['user_id'], PDO::PARAM_INT);
+                $stmt->execute();
+            }
+
         }
 
+        //掲示板表示
+        $sql = 'SELECT * FROM bulletinboard, users
+                WHERE bulletinboard.send_user_id = users.user_id
+                 order by post_id desc';
+        $stmt = $dbh->prepare($sql);
+        $stmt->execute();
+        $result_all = $stmt->fetchAll();
+        
+        
+        //データベース切断処理
+        $dbLib->disconnectDb($stmt, $dbh);
+
+    } catch (PDOException $e) {
+        print('Connection failed:'.$e -> getMessage());
+        die();
     }
-
-    //掲示板表示
-    $sql = 'SELECT * FROM bulletinboard, users
-            WHERE bulletinboard.send_user_id = users.user_id
-             order by post_id desc';
-    $stmt = $dbh->prepare($sql);
-    $stmt->execute();
-    $result_all = $stmt->fetchAll();
     
-    
-    //データベース切断処理
-    $dbLib->disconnectDb($stmt, $dbh);
+//ログインしていない時
+} else {
+    $msg = 'ログインしていません';
+    $link = '<a href="login.php">ログイン</a>';
 
-} catch (PDOException $e) {
-    print('Connection failed:'.$e -> getMessage());
-    die();
 }
 
 ?>
+<?php echo $link; ?>
 
+<div class="container_board">
 
-<form action="" method="post" name="post_text" enctype="multipart/form-data">
-    <label for="post_text">投稿内容</label>
-    <br>
-    <textarea id="post_text" name="post_text"  cols="40"  rows="8" maxlength=140></textarea >
-    <br>
-    <br>
-    <input type="hidden" name="MAX_FILE_SIZE" value="1000000">
-    新しいファイル：<input type="file" name="yourfile">
-    (1M以内)
-    <br>
-    <input type="submit" value="投稿する">
-    <br>
+    <div class="item_board2">
+        <a href="<?= $imgInfo['imgFPath']; ?>">
+        <img src="<?= $imgInfo['imgTPath']; ?>" alt="<?= $imgInfo['imgBName']; ?>" width="100" border="0">
 
+        <?php echo $msg; ?>
+        <?php echo $link ?>
+    </div>
+    <div ;class="item_board">a
+    </div>
+    <div class="item_board">b
+    </div>
+    <div class="item_board3">
+    <form action="" method="post" name="post_text" enctype="multipart/form-data">
+
+            <textarea id="post_text" name="post_text"  cols="60"  rows="8" maxlength=140></textarea >
+        </div>
+        <div class="item_board">
+            <input type="hidden" name="MAX_FILE_SIZE" value="1000000">
+            添付ファイル(1M以内)：<input type="file" name="yourfile">
+        </div>
+          <div class="item_board"></div>
+  <div class="item_board"></div>
+        <div class="item_board">
+            <input type="submit" value="投稿する">
+        </div>
+</div>
+
+<div class="container_board">
+  <div class="item_board2">A</div>
+  <div class="item_board3">B</div>
+  <div class="item_board">C</div>
+  <div class="item_board">D</div>
+  <div class="item_board">E</div>
+  <div class="item_board">F</div>
+  <div class="item_board">G</div>
+  <div class="item_board">H</div>
+  <div class="item_board">I</div>
+  <div class="item_board">J</div>
+  <div class="item_board">K</div>
+</div>
 
 <?php
 
@@ -235,7 +257,7 @@ try {
         echo '<table border="1">';
         echo '<tr>';
         echo '<th>';
-        print('投稿者ID:'.$result['user_id'].'<br>');
+        //print('投稿者ID:'.$result['user_id'].'<br>');
         print('投稿者名:'.$result['user_name']);
         echo '</th>';
         echo '</tr>';

@@ -9,36 +9,47 @@
 <body>
 <br>
 <br>
-<div class="center">
-<H1>
-<font color="blue">サインアップ</font>
-</H1>
 
+<h1>
+サインアップ
+</h1>
 
 <form action="register.php" method="post" name="register" enctype="multipart/form-data">
-    <label for="user_name">名前：</label>
-    <input type="text" id="user_name" name="user_name" required>
-    <br>
-    <br>
-    <label for="user_mail">メールアドレス：</label>
-    <input type="text" id="user_mail" name="user_mail" required>
-    <br>
-    <br>
-    <label for="user_pass">パスワード：</label>
-    <input type="text" id="user_pass" name="user_pass" required>
-    <br>
-    <br>
-    <input type="hidden" name="MAX_FILE_SIZE" value="1000000">
-    新しいファイル：<input type="file" name="yourfile">
-    (1M以内)<br>
-    <input type="submit" value="新規登録">
-    <br>
+<div class="container">
+    <div class="item_left">
+        <label for="user_name">名前：</label>
+    </div>
+    <div class="item_left">
+        <input type="text" id="user_name" name="user_name" required>
+    </div>
+    <div class="item_left">
+        <label for="user_mail">メールアドレス：</label>
+    </div>
+    <div class="item_left">
+        <input type="text" id="user_mail" name="user_mail" required>
+    </div>
+    <div class="item_left">
+        <label for="user_pass">パスワード：</label>
+    </div>
+    <div class="item_left">
+        <input type="text" id="user_pass" name="user_pass" required>
+    </div>
+    <div class="item_left">
+        <input type="hidden" name="MAX_FILE_SIZE" value="1000000">
+        プロフィール画像(1Mbyte以内)：
+    </div>
+    <div class="item">
+        <input type="file" name="yourfile">
+    </div>
+    <div class="item">
+        <input type="submit" value="新規登録">
+    </div>
+
 </form>
-
-<p>すでに登録済みの方は<a href="login_form.php">こちら</a></p>
-
-
+<div class="item">
+<p>すでに登録済みの方は<a href="login_form.php?">こちら</a></p>
 </div>
+
 </body>
 </html>
 

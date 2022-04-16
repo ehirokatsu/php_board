@@ -30,38 +30,20 @@ $dbLib = new DbLib();
 //プロフィール画像をアップロードしていない場合の初期化用
 $image_id = 0;
 
-
-if (isset($_SERVER['REQUEST_METHOD'])) {
-   
-    //POST以外受け付けない
-    if ($_SERVER['REQUEST_METHOD'] !== "POST") {
-        exit('アップロードが失敗しました。');
-    }
-    
-    //保管用ディレクトリを確保
-    if (!is_dir($folder_files) && !mkdir($folder_files)) {
-        exit('保管用ディレクトリを作ることができません。');
-    }
-    
-    //アップロードされた画像をDBに登録して画像IDを取得する
-    $image_id = $imgLib->registerImg($_FILES);
-    
-}
-
+//エラーメッセージ用の変数初期化
 $msg = "";
 $link = "";
 
-//入力されたメールアドレスとパスワードがNULL
-if (!isset($_POST['user_name'])
- || !isset($_POST['user_mail'])
- || !isset($_POST['user_pass'])) {
-
-    $msg = '名前、メールアドレスまたはパスワードがNULLです。';
+//POST以外受け付けない
+if (!isset($_SERVER['REQUEST_METHOD'])
+ || $_SERVER['REQUEST_METHOD'] !== "POST") {
+ 
+    $msg = 'アップロードが失敗しました。';
     
-//入力されたメールアドレスとパスワードが空白
-} elseif (empty($_POST['user_name'])
-       || empty($_POST['user_mail'])
-       || empty($_POST['user_pass'])) {
+//入力されたメールアドレスとパスワードが空白    
+} else if (empty($_POST['user_name'])
+ || empty($_POST['user_mail'])
+ || empty($_POST['user_pass'])) {
 
     $msg = '名前、メールアドレスまたはパスワードが空白です。';
 
@@ -72,9 +54,16 @@ if (!isset($_POST['user_name'])
 
     $msg = '名前、メールアドレスまたはパスワードの値が不正です。';
         
+//保管用ディレクトリを確保  する      
+} elseif (!is_dir($folder_files) && !mkdir($folder_files)) {
+
+    $msg = '保管用ディレクトリを作ることができません。';
+    
 } else {
 
-    
+    //アップロードされた画像をDBに登録して画像IDを取得する
+    $image_id = $imgLib->registerImg($_FILES);
+
     //入力パスワードをハッシュ化
     $user_pass = password_hash($_POST['user_pass'], PASSWORD_DEFAULT);
 
@@ -94,11 +83,12 @@ if (!isset($_POST['user_name'])
             //データベース接続処理
             $dbh = $dbLib->connectDb();
             
-            
-            //登録されていなければinsert  
+            //登録されていなければinsertする 
             $sql = "INSERT INTO users(user_name, user_pass, user_mail, user_image_id)
                     VALUES (:user_name, :user_pass, :user_mail, :user_image_id)";
+                    
             $stmt = $dbh->prepare($sql);
+            
             $stmt->bindValue(':user_name', $_POST['user_name'], PDO::PARAM_STR);
             $stmt->bindValue(':user_pass', $user_pass, PDO::PARAM_STR);
             $stmt->bindValue(':user_mail', $_POST['user_mail'], PDO::PARAM_STR);
@@ -113,12 +103,14 @@ if (!isset($_POST['user_name'])
             $link = '<a href="login_form.php">ログインページ</a>';
 
         }
+        
     } catch (PDOException $e) {
         $msg = $e->getMessage();
     }
-}
 
+}
 ?>
+
 
 <h1><?php echo $msg; ?></h1>
 <?php echo $link; ?>

@@ -13,6 +13,12 @@ class ImgLib
     
         require( dirname(__FILE__). '/env.inc');
 
+$imgInfo = [
+          'imgFPath'=>'',
+          'imgTPath'=>'',
+          'imgBName'=>''
+          ];
+          
         //データベース関数を使用する
         require_once( dirname(__FILE__). '/DbLib.php');
         $dbLib = new DbLib();
@@ -44,6 +50,7 @@ class ImgLib
             die();
         }
 
+        //引数の画像IDが存在する場合
         foreach ($result_all as $result) {
             
             //画像ID
@@ -65,7 +72,13 @@ class ImgLib
             $furl = "/board/fshow.php?image_id=$image_id";
             $turl = "/board/fshow.php?image_id=$image_id&th=y";
             
-            //表示する
+            
+            $imgInfo['imgFPath'] = $furl;
+            $imgInfo['imgTPath'] = $turl;
+            $imgInfo['imgBName'] = $bname;
+
+/*
+            //画像データがあれば、サムネイル画像を表示しリンク先を画像データにする
             if (is_file($fpath)) {
             
                 echo "<a href=\"$furl\">";
@@ -83,7 +96,10 @@ class ImgLib
                 echo "(removed)";
                 
             }
+*/            
+            
         }
+        return $imgInfo;
 
     }
 
@@ -91,7 +107,7 @@ class ImgLib
      * アップロードした画像を保存してDBに登録する
      *
      * @param int $imageFile アップロードした画像情報
-     * @return int $image_id DBに登録した画像のID
+     * @return int $image_id DBに登録した画像のID。失敗したら0を返却する
      */
     public function registerImg($imageFile)
     {
@@ -123,8 +139,8 @@ class ImgLib
 
         //ファイルがPOSTで受信していない、サイズオーバー、エラー発生時
         if (!is_uploaded_file($ftemp) || $fsize > $file_maxsize || $ferror > 0) {
-                    return 0;
-            exit('アップロードが失敗しました。');
+            return 0;
+            
         }
         
         //MIMEタイプを確認
@@ -134,8 +150,9 @@ class ImgLib
          && $ftype != 'image/pjpeg'
          && $ftype != 'text/html'
          && $ftype != 'text/plain') {
+         
             return 0;
-             exit('この種類のファイルは受付ません。');
+            
         }
         
         //ファイル名と拡張子を取得
@@ -211,7 +228,6 @@ class ImgLib
             
             //サムネイル画像の縦幅（元画像から計算する）
             $th = (int)($thumb_width * $ih / $iw);
-            
             
             //サムネイル用の空画像データを作成
             $thm = imagecreatetruecolor($tw, $th);

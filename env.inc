@@ -14,5 +14,5 @@
     $folder_thumbs = "$folder_root/files.thumbs";
     
     //サムネイルの横幅
-    $thumb_width = 100;
+    $thumb_width = 50;
 ?>
