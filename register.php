@@ -7,8 +7,7 @@
 <link rel="stylesheet" type="text/css" href="style.css">
 </head>
 <body>
-<br>
-<br>
+
 <div class="center">
 <H1>
 <font color="blue">新規登録</font>
@@ -17,6 +16,7 @@
 
 <?php
 
+//共通変数を使用する
 require_once( dirname(__FILE__). '/env.inc');
 
 //画像関数を使用する
@@ -34,27 +34,27 @@ $image_id = 0;
 $msg = "";
 $link = "";
 
-//POST以外受け付けない
+//POST以外であればNG
 if (!isset($_SERVER['REQUEST_METHOD'])
  || $_SERVER['REQUEST_METHOD'] !== "POST") {
  
     $msg = 'アップロードが失敗しました。';
     
-//入力されたメールアドレスとパスワードが空白    
+//入力されたメールアドレスとパスワードが空白はNG
 } else if (empty($_POST['user_name'])
  || empty($_POST['user_mail'])
  || empty($_POST['user_pass'])) {
 
     $msg = '名前、メールアドレスまたはパスワードが空白です。';
 
-//入力されたメールアドレスとパスワードが文字列以外    
+//入力されたメールアドレスとパスワードが文字列以外はNG
 } elseif (!is_string($_POST['user_name'])
        || !is_string($_POST['user_mail'])
        || !is_string($_POST['user_pass'])) { 
 
     $msg = '名前、メールアドレスまたはパスワードの値が不正です。';
         
-//保管用ディレクトリを確保  する      
+//アップロード画像の保管用ディレクトリ作成に失敗すればNG     
 } elseif (!is_dir($folder_files) && !mkdir($folder_files)) {
 
     $msg = '保管用ディレクトリを作ることができません。';
@@ -64,7 +64,7 @@ if (!isset($_SERVER['REQUEST_METHOD'])
     //アップロードされた画像をDBに登録して画像IDを取得する
     $image_id = $imgLib->registerImg($_FILES);
 
-    //入力パスワードをハッシュ化
+    //入力パスワードをハッシュ化する
     $user_pass = password_hash($_POST['user_pass'], PASSWORD_DEFAULT);
 
     try {
@@ -83,7 +83,7 @@ if (!isset($_SERVER['REQUEST_METHOD'])
             //データベース接続処理
             $dbh = $dbLib->connectDb();
             
-            //登録されていなければinsertする 
+            //メールアドレスが登録されていなければDBにinsertする 
             $sql = "INSERT INTO users(user_name, user_pass, user_mail, user_image_id)
                     VALUES (:user_name, :user_pass, :user_mail, :user_image_id)";
                     
@@ -107,15 +107,11 @@ if (!isset($_SERVER['REQUEST_METHOD'])
     } catch (PDOException $e) {
         $msg = $e->getMessage();
     }
-
 }
 ?>
 
-
 <h1><?php echo $msg; ?></h1>
 <?php echo $link; ?>
-
-
 </div>
 </body>
 </html>

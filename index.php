@@ -7,14 +7,12 @@
 <link rel="stylesheet" type="text/css" href="style.css">
 </head>
 <body>
-<br>
-<br>
-<div class="center">
 
-掲示板課題（フルスクラッチ）
-<br>
+<h1>掲示板（フルスクラッチ）</h1>
+
 <?php
 
+//共通変数を使用する
 require_once( dirname(__FILE__). '/env.inc');
 
 //画像関数を使用する
@@ -35,8 +33,13 @@ session_start();
 //ログインしているとき
 if (isset($_SESSION['user_id'])) {
 
+    //ユーザー名を取得
     $user_name = $_SESSION['user_name'];
+    
+    //ユーザー名出力用
     $msg = htmlspecialchars($user_name, \ENT_QUOTES, 'UTF-8');
+    
+    //ログアウト用リンク
     $link = '<a href="logout.php">ログアウト</a>';
     
     //ファイル情報をデータベースから取得
@@ -45,7 +48,7 @@ if (isset($_SESSION['user_id'])) {
         //データベース接続処理
         $dbh = $dbLib->connectDb();
 
-        //一覧表示するSQL文
+        //ログインしているユーザーのプロフィール画像を取得する
         $sql = "select image_id, image_ext, image_type, image_name, image_date
                 from users, images
                 where users.user_image_id = images.image_id and user_id = :user_id";
@@ -57,30 +60,13 @@ if (isset($_SESSION['user_id'])) {
         
         $result_all = $stmt->fetchAll();
         
-        //データベース切断処理
-        $dbLib->disconnectDb($stmt, $dbh);
-        
-    } catch (PDOException $e) {
-        print('Connection failed:'.$e -> getMessage());
-        die();
-    }
+        //ログインしているユーザーのプロフィール画像を取得する
+        foreach ($result_all as $result) {
+            $user_image_id = $result['image_id'];
+            $userImgInfo = $imgLib->showImgFromImageID($user_image_id);
+        }
 
-    foreach ($result_all as $result) {
-        $user_image_id = $result['image_id'];
-        $imgInfo = $imgLib->showImgFromImageID($user_image_id);
-    }
-
-    try {
-        //データベース接続処理
-        $dbh = $dbLib->connectDb();
-
-        //ログインしているユーザのuser_idを取得する
-        $sql = "SELECT user_id FROM users WHERE user_name = :name";
-        $stmt = $dbh->prepare($sql);
-        $stmt->bindValue(':name', $user_name, PDO::PARAM_STR);
-        $stmt->execute();
-        $user_id = $stmt->fetch(PDO::FETCH_ASSOC);
-
+        $user_id = $_SESSION['user_id'];
 
         //削除ボタンが押下された場合
         if (isset($_POST['delete']) && is_string($_POST['delete'])) {
@@ -94,10 +80,12 @@ if (isset($_SESSION['user_id'])) {
             //返信テーブルから返信内容を削除する
             $dbLib->deletePost('replyboard', (int)$_POST['delete_com']);
 
+            //元投稿の返信フラグをオフにする
         }
 
         //返信にチェックが入っていた場合
         $src_post_id = NULL;
+         
 
         if (!empty($_POST['reply'])) {
         
@@ -121,12 +109,16 @@ if (isset($_SESSION['user_id'])) {
             
             $src_post_id = (int)$_POST['reply'];
 
+        
+            //データベース接続処理
+            $dbh = $dbLib->connectDb();
+
             //元投稿のリプライフラグをONにする
             $sql = 'update bulletinboard set reply_flag = true where post_id = :post_id';
-
             $stmt = $dbh->prepare($sql);
             $stmt->bindValue(':post_id', $src_post_id, PDO::PARAM_INT);
             $stmt->execute();
+
 
             //投稿内容をリプライ用テーブルにinsertする
             if (isset($_POST['post_text']) && !empty($_POST['post_text'])) {
@@ -138,7 +130,7 @@ if (isset($_SESSION['user_id'])) {
                 $stmt = $dbh->prepare($sql);
                 $stmt->bindValue(':date', $today);
                 $stmt->bindValue(':post_text', $_POST['post_text'], PDO::PARAM_STR);            $stmt->bindValue(':post_image_id', $image_id, PDO::PARAM_INT);
-                $stmt->bindValue(':send_user_id', $user_id['user_id'], PDO::PARAM_INT);
+                $stmt->bindValue(':send_user_id', $user_id, PDO::PARAM_INT);
                 $stmt->bindValue(':src_post_id', $src_post_id, PDO::PARAM_INT);
                 $stmt->execute();
             }
@@ -167,7 +159,6 @@ if (isset($_SESSION['user_id'])) {
 
             if (isset($_POST['post_text']) && !empty($_POST['post_text'])) {
 
-                echo $image_id;
                 //投稿内容をinsert
                 $sql = 'INSERT INTO bulletinboard
                        (send_date, post_text, post_image_id, send_user_id,reply_flag)
@@ -175,26 +166,21 @@ if (isset($_SESSION['user_id'])) {
                 $stmt = $dbh->prepare($sql);
                 $stmt->bindValue(':date', $today, PDO::PARAM_STR);
                 $stmt->bindValue(':post_text', $_POST['post_text'], PDO::PARAM_STR);            $stmt->bindValue(':post_image_id', $image_id, PDO::PARAM_INT);
-                $stmt->bindValue(':send_user_id', $user_id['user_id'], PDO::PARAM_INT);
+                $stmt->bindValue(':send_user_id', $user_id, PDO::PARAM_INT);
                 $stmt->execute();
             }
 
         }
-
-        //掲示板表示
-        $sql = 'SELECT * FROM bulletinboard, users
-                WHERE bulletinboard.send_user_id = users.user_id
-                 order by post_id desc';
-        $stmt = $dbh->prepare($sql);
-        $stmt->execute();
-        $result_all = $stmt->fetchAll();
-        
         
         //データベース切断処理
         $dbLib->disconnectDb($stmt, $dbh);
 
+        
+        
+        
+
     } catch (PDOException $e) {
-        print('Connection failed:'.$e -> getMessage());
+        echo 'Connection failed:'.$e -> getMessage();
         die();
     }
     
@@ -206,184 +192,217 @@ if (isset($_SESSION['user_id'])) {
 }
 
 ?>
-<?php echo $link; ?>
+<div class="center">
+    <?php echo $link; ?>
+</div>
+<div class="container_post">
 
-<div class="container_board">
-
-    <div class="item_board2">
-        <a href="<?= $imgInfo['imgFPath']; ?>">
-        <img src="<?= $imgInfo['imgTPath']; ?>" alt="<?= $imgInfo['imgBName']; ?>" width="100" border="0">
-
-        <?php echo $msg; ?>
-        <?php echo $link ?>
+    <div class="item_post">
+        <a href="<?= $userImgInfo['imgFPath']; ?>">
+        <img src="<?= $userImgInfo['imgTPath']; ?>" alt="<?= $userImgInfo['imgBName']; ?>" width="50" border="0"></a>
+    <?php echo $msg; ?>
     </div>
-    <div ;class="item_board">a
+    <div class="item_post">
+        
     </div>
-    <div class="item_board">b
+    <div class="item_post">
     </div>
-    <div class="item_board3">
+    <div class="item_post">
+    </div>
+    <div class="item_post_text">
     <form action="" method="post" name="post_text" enctype="multipart/form-data">
 
-            <textarea id="post_text" name="post_text"  cols="60"  rows="8" maxlength=140></textarea >
+            <textarea id="post_text" name="post_text" cols="60" rows="8" maxlength=140></textarea >
         </div>
-        <div class="item_board">
+        <div class="item_post_file">
             <input type="hidden" name="MAX_FILE_SIZE" value="1000000">
             添付ファイル(1M以内)：<input type="file" name="yourfile">
         </div>
-          <div class="item_board"></div>
-  <div class="item_board"></div>
-        <div class="item_board">
+          <div class="item_post"></div>
+        <div class="item_post">
             <input type="submit" value="投稿する">
         </div>
 </div>
 
-<div class="container_board">
-  <div class="item_board2">A</div>
-  <div class="item_board3">B</div>
-  <div class="item_board">C</div>
-  <div class="item_board">D</div>
-  <div class="item_board">E</div>
-  <div class="item_board">F</div>
-  <div class="item_board">G</div>
-  <div class="item_board">H</div>
-  <div class="item_board">I</div>
-  <div class="item_board">J</div>
-  <div class="item_board">K</div>
-</div>
+<br>
+<br>
+<br>
 
 <?php
 
-    foreach ($result_all as $result) {
-        echo '<table border="1">';
-        echo '<tr>';
-        echo '<th>';
-        //print('投稿者ID:'.$result['user_id'].'<br>');
-        print('投稿者名:'.$result['user_name']);
-        echo '</th>';
-        echo '</tr>';
+//データベース接続処理
+$dbh = $dbLib->connectDb();
 
-        echo '<tr>';
-        echo '<td>';
-        print($result['post_id']);
-        print('投稿日時:'.$result['send_date']);
+//投稿内容を表示する
+$sql = 'SELECT * FROM bulletinboard, users
+        WHERE bulletinboard.send_user_id = users.user_id
+         order by post_id desc';
+$stmt = $dbh->prepare($sql);
+$stmt->execute();
+$result_all = $stmt->fetchAll();
 
-        echo '</td>';
-        echo '</tr>';
+foreach ($result_all as $result) {
 
-        echo '<tr>';
-        echo '<td>';
-        print($result['post_text']);
-        echo '</td>';
-        echo '</tr>';
+    echo '<div class="container_board">';
+    echo '<div class="item_board_user">';
 
-        echo '<tr>';
-        echo '<td>';
+        //投稿IDに対応するユーザの画像IDを取得する
+        $sql = 'SELECT * FROM bulletinboard, users
+                WHERE bulletinboard.send_user_id = users.user_id
+                 and bulletinboard.post_id = :post_id';
+        $stmt = $dbh->prepare($sql);
+        $stmt->bindValue(':post_id', $result['post_id'], PDO::PARAM_INT);
+        $stmt->execute();
+        $result_all2 = $stmt->fetchAll();
+        
+        foreach ($result_all2 as $result2) {
+        
+            //画像情報を取得する
+            $imgInfo = $imgLib->showImgFromImageID($result2['user_image_id']);
+            $imgFPath = $imgInfo['imgFPath'];
+            $imgTPath = $imgInfo['imgTPath'];
+            $imgBName = $imgInfo['imgBName'];
+          
+            if ($imgFPath !== '') {
+                echo "<a href=\"$imgFPath\">";
+                echo "<img src=\"$imgTPath\" alt=\"$imgBName\" width=\"50\" border=\"0\"></a>";
+            }
+
+        }
+
+
+        echo '投稿者:'.$result['user_name'];
+
+        
+    echo '</div>';
+    echo '<div class="item_board_date">';
+        echo $result['send_date'];
+    echo '</div>';
+    echo '<div class="item_board_text">';
+        echo $result['post_text'];
+        echo '<br>';
         //画像IDから画像を表示す
-        $imgLib->showImgFromImageID($result['post_image_id']);
-        echo '</td>';
-        echo '</tr>';
-
+        $imgInfo = $imgLib->showImgFromImageID($result['post_image_id']);
+        //var_dump($imgInfo);
+        $imgFPath = $imgInfo['imgFPath'];
+        $imgTPath = $imgInfo['imgTPath'];
+        $imgBName = $imgInfo['imgBName'];
+      
+        if ($imgFPath !== '') {
+            echo "<a href=\"$imgFPath\">";
+            echo "<img src=\"$imgTPath\" alt=\"$imgBName\" width=\"100\" border=\"0\"></a>";
+        }
+  
+    echo '</div>';
         $post_id = (int)$result['post_id'];
 
-        echo '<tr>';
-        echo '<td>';
+    echo '<div class="item_board">';
         echo "<input type=\"radio\" id=\"reply$post_id\" name=\"reply\" value=\"$post_id\">";
 
         echo "<label for=\"reply$post_id\">返信　</label>";
 
-        if ($result['send_user_id'] === $user_id['user_id']) {
+    echo '</div>';
+    echo '<div class="item_board">';
+    echo '</div>';
+    echo '<div class="item_board">';
+    echo '</div>';
+    echo '<div class="item_board">';
+        if ($result['send_user_id'] === $user_id) {
             echo "<button type=\"submit\" id=\"delete\" name=\"delete\" value=\"$post_id\">削除</button>";
 
         }
+    echo '</div>';
 
-        echo '</td>';
-        echo '</tr>';
+    
 
-        if ($result['reply_flag']) {
-        
-            try {
-                //データベース接続処理
-                $dbh = $dbLib->connectDb();
+    if ($result['reply_flag']) {
+    
+    echo '</div>';
+    echo '<div class="container_board">';
+    
+        try {
 
+
+            $sql = 'SELECT * FROM replyboard, users
+                    WHERE replyboard.send_user_id = users.user_id
+                    and src_post_id = :src_post_id
+                    order by reply_post_id desc';
+            $stmt2 = $dbh->prepare($sql);
+            $stmt2->bindValue(':src_post_id', $result['post_id'], PDO::PARAM_INT);
+            $stmt2->execute();
+            $result_all2 = $stmt2->fetchAll();
+
+            foreach ($result_all2 as $result2) {
+            
+                
+                echo '<div class="item_board_user">';
+                
+                //返信投稿者のプロフィールの画像を取得する
                 $sql = 'SELECT * FROM replyboard, users
                         WHERE replyboard.send_user_id = users.user_id
-                        and src_post_id = :src_post_id
-                        order by reply_post_id desc';
-                $stmt2 = $dbh->prepare($sql);
-                $stmt2->bindValue(':src_post_id', $result['post_id'], PDO::PARAM_INT);
-                $stmt2->execute();
-                $result_all2 = $stmt2->fetchAll();
-
-                foreach ($result_all2 as $result2) {
-                    echo '<tr>';
-                    echo '<td>';
-
-                    echo '<table border="1">';
-                    echo '<tr>';
-                    echo '<th>';
-                    $imgLib->showImgFromImageID($user_image_id);
-                    //print('返信投稿者ID：'.$result2['reply_post_id'].'<br>');
-                    print('返信投稿者名：'.$result2['user_name'].'<br>');
-                    
-                    echo '</th>';
-                    echo '</tr>';
-
-                    echo '<tr>';
-                    echo '<td>';
-                    print($result2['send_date']);
-                    echo '</td>';
-                    echo '</tr>';
-
-                    echo '<tr>';
-                    echo '<td>';
-                    print($result2['post_text']);
-                    echo '</td>';
-                    echo '</tr>';
-                    
-                    echo '<tr>';
-                    echo '<td>';
-                    //画像IDから画像を表示す
-                    $imgLib->showImgFromImageID($result2['post_image_id']);
-                    echo '</td>';
-                    echo '</tr>';
-
-                    echo '<tr>';
-                    echo '<td>';
-                    $reply_post_id = $result2['reply_post_id'];
-                    if ($result2['send_user_id'] === $user_id['user_id']) {
-                        echo "<button type=\"submit\" id=\"delete_com\" name=\"delete_com\" value=\"$reply_post_id\">削除</button>";
-                        echo '<br>';
-
+                         and replyboard.reply_post_id = :post_id';
+                $stmt = $dbh->prepare($sql);
+                $stmt->bindValue(':post_id', $result2['reply_post_id'], PDO::PARAM_INT);
+                $stmt->execute();
+                $result_all3 = $stmt->fetchAll();
+                
+                foreach ($result_all3 as $result3) {
+                
+                    //画像情報を取得する
+                    $imgInfo = $imgLib->showImgFromImageID($result3['user_image_id']);
+                    $imgFPath = $imgInfo['imgFPath'];
+                    $imgTPath = $imgInfo['imgTPath'];
+                    $imgBName = $imgInfo['imgBName'];
+                  
+                    if ($imgFPath !== '') {
+                        echo "<a href=\"$imgFPath\">";
+                        echo "<img src=\"$imgTPath\" alt=\"$imgBName\" width=\"50\" border=\"0\"></a>";
                     }
-                    echo '</td>';
-                    echo '</tr>';
 
-                    echo '</table>';
-                    echo '<br>';
-
-                    echo '</td>';
-                    echo '</tr>';
-                    
-                    //データベース切断処理
-                    $dbLib->disconnectDb($stmt, $dbh);
-            
                 }
-            } catch (PDOException $e) {
-                print('Connection failed:'.$e -> getMessage());
-                die();
+                
+                echo '返信投稿者名：'.$result2['user_name'].'<br>';
+                echo '</div>';
+
+                
+                echo '<div class="item_board_date">';
+                echo $result2['send_date'];
+                echo '</div>';
+                echo '<div class="item_board_text">';
+                echo $result2['post_text'];
+
+                //画像IDから画像を表示す
+                $imgLib->showImgFromImageID($result2['post_image_id']);
+                echo '</div>';
+                echo '<div class="item_board">';
+                echo '</div>';
+                echo '<div class="item_board">';
+                echo '</div>';
+                echo '<div class="item_board">';
+                echo '</div>';
+                echo '<div class="item_board">';
+                $reply_post_id = $result2['reply_post_id'];
+                if ($result2['send_user_id'] === $user_id) {
+                    echo "<button type=\"submit\" id=\"delete_com\" name=\"delete_com\" value=\"$reply_post_id\">削除</button>";
+
+                echo '</div>';
+
+                }
             }
+        } catch (PDOException $e) {
+            echo 'Connection failed:'.$e -> getMessage();
+            die();
         }
-        echo '</table>';
-        echo '<br>';
-
     }
+    echo '</div>';
+    echo '<br>';
+  
+}
+//データベース切断処理
+$dbLib->disconnectDb($stmt, $dbh);
+
 ?>
-
-
-
 </form>
-
-
-</div>
 </body>
 </html>
+

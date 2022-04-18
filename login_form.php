@@ -7,8 +7,7 @@
 <link rel="stylesheet" type="text/css" href="style.css">
 </head>
 <body>
-<br>
-<br>
+
 <H1>
 ログイン
 </H1>
@@ -16,6 +15,7 @@
 
 <?php
 
+//共通変数を使用する
 require_once( dirname(__FILE__). '/env.inc');
 
 //データベース関数を使用する
@@ -75,7 +75,8 @@ if (empty($_POST['user_mail']) || empty($_POST['user_pass'])) {
     }
 }
 
-//サインアップ画面から遷移した場合はエラーメッセージを表示しない
+//サインアップ画面から遷移した場合はGETメソッドを使用して
+//エラーメッセージを表示しないようにする
 if (isset($_SERVER['REQUEST_METHOD'])) {
 
     if ($_SERVER['REQUEST_METHOD'] === "GET") {
@@ -85,28 +86,28 @@ if (isset($_SERVER['REQUEST_METHOD'])) {
 }
 ?>
 
-<br>
-<div class="container">
+
+<div class="container_signup">
 <div class="item">
     <?php echo $msg; ?>
 </div>
 <br>
 <form action="login_form.php" method="post" name="login">
 
-    <div class="item_left">
+    <div class="item_signup_left">
         <label for="user_mail">メールアドレス：</label>
     </div>
-    <div class="item_left">
+    <div class="item_signup_left">
         <input type="text" id="user_mail" name="user_mail">
     </div>
-    <div class="item_left">
+    <div class="item_signup_left">
         <label for="user_pass">パスワード：</label>
     </div>
-    <div class="item_left">
+    <div class="item_signup_left">
         <input type="text" id="user_pass" name="user_pass">
     </div>
     <br>
-    <div class="item_big">
+    <div class="item_signup_big">
         <input type="submit" value="ログイン">
     </div>
 </form>

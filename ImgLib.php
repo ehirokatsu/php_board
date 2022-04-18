@@ -11,13 +11,15 @@ class ImgLib
     public function showImgFromImageID($image_id)
     {
     
+        //共通変数を使用する
         require( dirname(__FILE__). '/env.inc');
 
-$imgInfo = [
-          'imgFPath'=>'',
-          'imgTPath'=>'',
-          'imgBName'=>''
-          ];
+        //戻り値用の変数宣言
+        $imgInfo = [
+                  'imgFPath'=>'',   //画像のパス
+                  'imgTPath'=>'',   //サムネイル画像のパス
+                  'imgBName'=>''    //画像のファイル名
+                  ];
           
         //データベース関数を使用する
         require_once( dirname(__FILE__). '/DbLib.php');
@@ -77,27 +79,7 @@ $imgInfo = [
             $imgInfo['imgTPath'] = $turl;
             $imgInfo['imgBName'] = $bname;
 
-/*
-            //画像データがあれば、サムネイル画像を表示しリンク先を画像データにする
-            if (is_file($fpath)) {
-            
-                echo "<a href=\"$furl\">";
-                if (is_file($tpath)) {
-                
-                    echo "<img src=\"$turl\" alt=\"$bname\" width=\"100\" border=\"0\">";
-                } else {
-                    echo "<br>";
-                }
-                echo "</a>";
-                
-            } else {
-            
-                //画像ファイルが無い場合に表示する
-                echo "(removed)";
-                
-            }
-*/            
-            
+
         }
         return $imgInfo;
 
@@ -112,6 +94,7 @@ $imgInfo = [
     public function registerImg($imageFile)
     {
 
+        //共通変数を使用する
         require( dirname(__FILE__). '/env.inc');
 
         //データベース関数を使用する
@@ -144,12 +127,7 @@ $imgInfo = [
         }
         
         //MIMEタイプを確認
-        if ($ftype != 'application/msword'
-         && $ftype != 'application/pdf'
-         && $ftype != 'image/jpeg'
-         && $ftype != 'image/pjpeg'
-         && $ftype != 'text/html'
-         && $ftype != 'text/plain') {
+        if ($ftype !== 'image/jpeg' && $ftype !== 'image/pjpeg') {
          
             return 0;
             
