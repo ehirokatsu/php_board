@@ -31,7 +31,7 @@ class DbLib extends BaseDbLib
     /**
      *指定したテーブル名から指定した投稿IDの行を削除する
      *
-     * @param string $table_name メールアドレス
+     * @param string $table_name テーブル名称
      * @param int $post_id 投稿ID
      * @return void
      */
@@ -55,8 +55,7 @@ class DbLib extends BaseDbLib
         //データベース接続処理
         $dbh = $this->connectDb();
         
-        //入力されたメールアドレスを検索する
-       //投稿内容を削除する
+        //投稿内容を削除する
         $sql = "delete from $table_name where $id_name = :post_id";
         $stmt = $dbh->prepare($sql);
         $stmt->bindValue(':post_id', $post_id, PDO::PARAM_INT);
@@ -66,5 +65,50 @@ class DbLib extends BaseDbLib
         $this->disconnectDb($stmt, $dbh);
         
     }
+    
+    /**
+     *投稿IDから画像情報（パス、サムネイルパス、ファイル名）を取得する
+     * @param int $post_id 投稿ID
+     * @return パス、サムネイルパス、ファイル名
+     */
+    public function getImgIdFromPostId($table_name, $post_id)
+    {
+    
+        if ($table_name === 'bulletinboard') {
+        
+            //テーブル名が投稿用テーブル
+            $id_name = 'post_id';
+        
+        } elseif ($table_name === 'replyboard') {
+            
+            //テーブル名が返信用テーブル
+            $id_name = 'reply_post_id';
+            
+        } else {
+            print('指定されたテーブル名が無効です');
+            die();
+        }
+        
+        //データベース接続処理
+        $dbh = $this->connectDb();
+        
+        $sql = "SELECT * FROM $table_name, users
+                WHERE $table_name.send_user_id = users.user_id
+                 and $table_name.$id_name = :post_id";
+        $stmt = $dbh->prepare($sql);
+        $stmt->bindValue(':post_id', $post_id, PDO::PARAM_INT);
+        $stmt->execute();
+        $imgIdsAll = $stmt->fetchAll();
+
+        //データベース切断処理
+        $this->disconnectDb($stmt, $dbh);
+        
+        foreach ($imgIdsAll as $imgIds) {
+
+            return $imgIds['user_image_id'];
+            
+        }
+    }
+    
 }
 

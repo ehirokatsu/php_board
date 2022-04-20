@@ -45,7 +45,7 @@
 
 </form>
 <div class="item_signup">
-<p>すでに登録済みの方は<a href="login_form.php?">こちら</a></p>
+<p>すでに登録済みの方は<a href="loginForm.php">こちら</a></p>
 </div>
 
 </body>

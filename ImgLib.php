@@ -8,14 +8,13 @@ class ImgLib
      * @param int $image_id 表示する画像ID
      * @return void
      */
-    public function showImgFromImageID($image_id)
+    public function getImgInfos($image_id)
     {
-    
         //共通変数を使用する
         require( dirname(__FILE__). '/env.inc');
 
         //戻り値用の変数宣言
-        $imgInfo = [
+        $imgInfos = [
                   'imgFPath'=>'',   //画像のパス
                   'imgTPath'=>'',   //サムネイル画像のパス
                   'imgBName'=>''    //画像のファイル名
@@ -71,17 +70,17 @@ class ImgLib
             $tpath = "$folder_thumbs/$image_id.$image_ext";
             
             //ファイルのURLを決定
-            $furl = "/board/fshow.php?image_id=$image_id";
-            $turl = "/board/fshow.php?image_id=$image_id&th=y";
+            $furl = "/board/imgShow.php?image_id=$image_id";
+            $turl = "/board/imgShow.php?image_id=$image_id&th=y";
             
             
-            $imgInfo['imgFPath'] = $furl;
-            $imgInfo['imgTPath'] = $turl;
-            $imgInfo['imgBName'] = $bname;
+            $imgInfos['imgFPath'] = $furl;
+            $imgInfos['imgTPath'] = $turl;
+            $imgInfos['imgBName'] = $bname;
 
 
         }
-        return $imgInfo;
+        return $imgInfos;
 
     }
 

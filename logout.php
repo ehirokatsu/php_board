@@ -14,9 +14,16 @@
 </H1>
 
 <?php
+
+//セッション開始
 session_start();
-$_SESSION = array();//セッションの中身をすべて削除
-session_destroy();//セッションを破壊
+
+//セッションの中身をすべて削除
+$_SESSION = array();
+
+//セッションを破壊
+session_destroy();
+
 ?>
 
 <p>ログアウトしました。</p>

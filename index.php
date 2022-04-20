@@ -13,6 +13,7 @@
 <?php
 
 //共通変数を使用する
+require_once( dirname(__FILE__). '/define.inc');
 require_once( dirname(__FILE__). '/env.inc');
 
 //画像関数を使用する
@@ -34,10 +35,10 @@ session_start();
 if (isset($_SESSION['user_id'])) {
 
     //ユーザー名を取得
-    $user_name = $_SESSION['user_name'];
+    $loginUserName = $_SESSION['user_name'];
     
     //ユーザー名出力用
-    $msg = htmlspecialchars($user_name, \ENT_QUOTES, 'UTF-8');
+    $msg = htmlspecialchars($loginUserName, \ENT_QUOTES, 'UTF-8');
     
     //ログアウト用リンク
     $link = '<a href="logout.php">ログアウト</a>';
@@ -53,28 +54,28 @@ if (isset($_SESSION['user_id'])) {
                 from users, images
                 where users.user_image_id = images.image_id and user_id = :user_id";
         $stmt = $dbh->prepare($sql);
-        
         $stmt->bindValue(':user_id', $_SESSION['user_id'], PDO::PARAM_INT);
-
         $stmt->execute();
-        
-        $result_all = $stmt->fetchAll();
+        $userImgsAll_all = $stmt->fetchAll();
         
         //ログインしているユーザーのプロフィール画像を取得する
-        foreach ($result_all as $result) {
-            $user_image_id = $result['image_id'];
-            $userImgInfo = $imgLib->showImgFromImageID($user_image_id);
+        foreach ($userImgsAll_all as $userImgs) {
+        
+            $user_image_id = $userImgs['image_id'];
+            $userImgInfos= $imgLib->getImgInfos($user_image_id);
+            
         }
 
         $user_id = $_SESSION['user_id'];
 
-        //削除ボタンが押下された場合
+        //投稿の削除ボタンが押下された場合
         if (isset($_POST['delete']) && is_string($_POST['delete'])) {
 
             //投稿テーブルから投稿内容を削除する
             $dbLib->deletePost('bulletinboard', (int)$_POST['delete']);
 
         }
+        //返信投稿の削除ボタンが押下された場合
         if (isset($_POST['delete_com']) && is_string($_POST['delete_com'])) {
 
             //返信テーブルから返信内容を削除する
@@ -84,9 +85,6 @@ if (isset($_SESSION['user_id'])) {
         }
 
         //返信にチェックが入っていた場合
-        $src_post_id = NULL;
-         
-
         if (!empty($_POST['reply'])) {
         
             //画像があれば登録する
@@ -107,6 +105,7 @@ if (isset($_SESSION['user_id'])) {
                 $image_id = $imgLib->registerImg($_FILES);
             }
             
+            //$src_post_id = NULL;
             $src_post_id = (int)$_POST['reply'];
 
         
@@ -126,7 +125,6 @@ if (isset($_SESSION['user_id'])) {
                 $sql = 'insert into replyboard
                  (send_date, post_text, post_image_id, send_user_id, src_post_id)
                  values (:date, :post_text, :post_image_id, :send_user_id, :src_post_id)';
-
                 $stmt = $dbh->prepare($sql);
                 $stmt->bindValue(':date', $today);
                 $stmt->bindValue(':post_text', $_POST['post_text'], PDO::PARAM_STR);            $stmt->bindValue(':post_image_id', $image_id, PDO::PARAM_INT);
@@ -169,15 +167,10 @@ if (isset($_SESSION['user_id'])) {
                 $stmt->bindValue(':send_user_id', $user_id, PDO::PARAM_INT);
                 $stmt->execute();
             }
-
         }
         
         //データベース切断処理
         $dbLib->disconnectDb($stmt, $dbh);
-
-        
-        
-        
 
     } catch (PDOException $e) {
         echo 'Connection failed:'.$e -> getMessage();
@@ -186,20 +179,21 @@ if (isset($_SESSION['user_id'])) {
     
 //ログインしていない時
 } else {
-    $msg = 'ログインしていません';
-    $link = '<a href="login.php">ログイン</a>';
-
+    echo 'ログインしていません<br>';
+    echo '<a href="login.php">ログイン</a>';
+    exit();
 }
 
 ?>
+
 <div class="center">
     <?php echo $link; ?>
 </div>
 <div class="container_post">
 
     <div class="item_post">
-        <a href="<?= $userImgInfo['imgFPath']; ?>">
-        <img src="<?= $userImgInfo['imgTPath']; ?>" alt="<?= $userImgInfo['imgBName']; ?>" width="50" border="0"></a>
+        <a href="<?= $userImgInfos['imgFPath']; ?>">
+        <img src="<?= $userImgInfos['imgTPath']; ?>" alt="<?= $userImgInfos['imgBName']; ?>" width="50" border="0"></a>
     <?php echo $msg; ?>
     </div>
     <div class="item_post">
@@ -233,60 +227,51 @@ if (isset($_SESSION['user_id'])) {
 //データベース接続処理
 $dbh = $dbLib->connectDb();
 
-//投稿内容を表示する
+//投稿テーブルとユーザーテーブルを連結して内容を全て取得する
 $sql = 'SELECT * FROM bulletinboard, users
         WHERE bulletinboard.send_user_id = users.user_id
          order by post_id desc';
 $stmt = $dbh->prepare($sql);
 $stmt->execute();
-$result_all = $stmt->fetchAll();
+$posts_all = $stmt->fetchAll();
 
-foreach ($result_all as $result) {
+foreach ($posts_all as $posts) {
 
     echo '<div class="container_board">';
     echo '<div class="item_board_user">';
 
-        //投稿IDに対応するユーザの画像IDを取得する
-        $sql = 'SELECT * FROM bulletinboard, users
-                WHERE bulletinboard.send_user_id = users.user_id
-                 and bulletinboard.post_id = :post_id';
-        $stmt = $dbh->prepare($sql);
-        $stmt->bindValue(':post_id', $result['post_id'], PDO::PARAM_INT);
-        $stmt->execute();
-        $result_all2 = $stmt->fetchAll();
-        
-        foreach ($result_all2 as $result2) {
-        
-            //画像情報を取得する
-            $imgInfo = $imgLib->showImgFromImageID($result2['user_image_id']);
-            $imgFPath = $imgInfo['imgFPath'];
-            $imgTPath = $imgInfo['imgTPath'];
-            $imgBName = $imgInfo['imgBName'];
-          
-            if ($imgFPath !== '') {
-                echo "<a href=\"$imgFPath\">";
-                echo "<img src=\"$imgTPath\" alt=\"$imgBName\" width=\"50\" border=\"0\"></a>";
-            }
+        //投稿したユーザのプロフィール画像IDを取得する
+        $user_image_id = $dbLib->getImgIdFromPostId('bulletinboard', $posts['post_id']);
 
+        //画像情報を取得する
+        $imgInfos = $imgLib->getImgInfos($user_image_id);
+        $imgFPath = $imgInfos['imgFPath'];
+        $imgTPath = $imgInfos['imgTPath'];
+        $imgBName = $imgInfos['imgBName'];
+
+        //プロフィール画像があれば表示する
+        if ($imgFPath !== '') {
+            echo "<a href=\"$imgFPath\">";
+            echo "<img src=\"$imgTPath\" alt=\"$imgBName\" width=\"50\"
+             border=\"0\"></a>";
         }
 
 
-        echo '投稿者:'.$result['user_name'];
+        echo '投稿者:'.$posts['user_name'];
 
         
     echo '</div>';
     echo '<div class="item_board_date">';
-        echo $result['send_date'];
+        echo $posts['send_date'];
     echo '</div>';
     echo '<div class="item_board_text">';
-        echo $result['post_text'];
+        echo $posts['post_text'];
         echo '<br>';
         //画像IDから画像を表示す
-        $imgInfo = $imgLib->showImgFromImageID($result['post_image_id']);
-        //var_dump($imgInfo);
-        $imgFPath = $imgInfo['imgFPath'];
-        $imgTPath = $imgInfo['imgTPath'];
-        $imgBName = $imgInfo['imgBName'];
+        $imgInfos = $imgLib->getImgInfos($posts['post_image_id']);
+        $imgFPath = $imgInfos['imgFPath'];
+        $imgTPath = $imgInfos['imgTPath'];
+        $imgBName = $imgInfos['imgBName'];
       
         if ($imgFPath !== '') {
             echo "<a href=\"$imgFPath\">";
@@ -294,11 +279,13 @@ foreach ($result_all as $result) {
         }
   
     echo '</div>';
-        $post_id = (int)$result['post_id'];
+        
 
     echo '<div class="item_board">';
+    
+        //投稿IDを返信ラジオボタンのValueに埋め込む
+        $post_id = (int)$posts['post_id'];
         echo "<input type=\"radio\" id=\"reply$post_id\" name=\"reply\" value=\"$post_id\">";
-
         echo "<label for=\"reply$post_id\">返信　</label>";
 
     echo '</div>';
@@ -307,72 +294,81 @@ foreach ($result_all as $result) {
     echo '<div class="item_board">';
     echo '</div>';
     echo '<div class="item_board">';
-        if ($result['send_user_id'] === $user_id) {
-            echo "<button type=\"submit\" id=\"delete\" name=\"delete\" value=\"$post_id\">削除</button>";
+    
+        //投稿がログインしているユーザなら削除ボタンを表示する
+        if ($posts['send_user_id'] === $user_id) {
+        
+            echo "<button type=\"submit\" id=\"delete\" name=\"delete\"
+             value=\"$post_id\">削除</button>";
 
         }
+        
     echo '</div>';
 
     
-
-    if ($result['reply_flag']) {
-    
-    echo '</div>';
-    echo '<div class="container_board">';
+    //投稿に返信がある場合
+    if ($posts['reply_flag']) {
     
         try {
-
-
+        
+            //データベース接続処理
+            $dbh = $dbLib->connectDb();
+            
+            //返信投稿テーブルとユーザーテーブルを連結して内容を取得する
             $sql = 'SELECT * FROM replyboard, users
                     WHERE replyboard.send_user_id = users.user_id
                     and src_post_id = :src_post_id
                     order by reply_post_id desc';
-            $stmt2 = $dbh->prepare($sql);
-            $stmt2->bindValue(':src_post_id', $result['post_id'], PDO::PARAM_INT);
-            $stmt2->execute();
-            $result_all2 = $stmt2->fetchAll();
+            $stmtReply = $dbh->prepare($sql);
+            $stmtReply->bindValue(':src_post_id', $posts['post_id'], PDO::PARAM_INT);
+            $stmtReply->execute();
+            $replyPostsAll = $stmtReply->fetchAll();
 
-            foreach ($result_all2 as $result2) {
+            //データベース切断処理
+            $dbLib->disconnectDb($stmt, $dbh);
             
-                
+            foreach ($replyPostsAll as $replyPosts) {
+            
+                echo '</div>';
+                echo '<div class="container_board">';
                 echo '<div class="item_board_user">';
-                
-                //返信投稿者のプロフィールの画像を取得する
-                $sql = 'SELECT * FROM replyboard, users
-                        WHERE replyboard.send_user_id = users.user_id
-                         and replyboard.reply_post_id = :post_id';
-                $stmt = $dbh->prepare($sql);
-                $stmt->bindValue(':post_id', $result2['reply_post_id'], PDO::PARAM_INT);
-                $stmt->execute();
-                $result_all3 = $stmt->fetchAll();
-                
-                foreach ($result_all3 as $result3) {
-                
+
+                    //投稿したユーザのプロフィール画像IDを取得する
+                    $user_image_id = $dbLib->getImgIdFromPostId('replyboard', $replyPosts['reply_post_id']);
+                    
                     //画像情報を取得する
-                    $imgInfo = $imgLib->showImgFromImageID($result3['user_image_id']);
-                    $imgFPath = $imgInfo['imgFPath'];
-                    $imgTPath = $imgInfo['imgTPath'];
-                    $imgBName = $imgInfo['imgBName'];
+                    $imgInfos = $imgLib->getImgInfos($user_image_id);
+                    $imgFPath = $imgInfos['imgFPath'];
+                    $imgTPath = $imgInfos['imgTPath'];
+                    $imgBName = $imgInfos['imgBName'];
                   
                     if ($imgFPath !== '') {
                         echo "<a href=\"$imgFPath\">";
                         echo "<img src=\"$imgTPath\" alt=\"$imgBName\" width=\"50\" border=\"0\"></a>";
                     }
-
-                }
-                
-                echo '返信投稿者名：'.$result2['user_name'].'<br>';
+                    
+                    echo '返信投稿者名：'.$replyPosts['user_name'].'<br>';
+                    
                 echo '</div>';
 
                 
                 echo '<div class="item_board_date">';
-                echo $result2['send_date'];
+                    echo $replyPosts['send_date'];
                 echo '</div>';
                 echo '<div class="item_board_text">';
-                echo $result2['post_text'];
-
-                //画像IDから画像を表示す
-                $imgLib->showImgFromImageID($result2['post_image_id']);
+                    echo $replyPosts['post_text'];
+                    echo '<br>';
+                    //画像IDから画像を表示す
+                    $imgInfos = $imgLib->getImgInfos($replyPosts['post_image_id']);
+                    $imgFPath = $imgInfos['imgFPath'];
+                    $imgTPath = $imgInfos['imgTPath'];
+                    $imgBName = $imgInfos['imgBName'];
+                      
+                    if ($imgFPath !== '') {
+                        echo "<a href=\"$imgFPath\">";
+                        echo "<img src=\"$imgTPath\" alt=\"$imgBName\"
+                         width=\"50\" border=\"0\"></a>";
+                    }
                 echo '</div>';
                 echo '<div class="item_board">';
                 echo '</div>';
@@ -381,9 +377,11 @@ foreach ($result_all as $result) {
                 echo '<div class="item_board">';
                 echo '</div>';
                 echo '<div class="item_board">';
-                $reply_post_id = $result2['reply_post_id'];
-                if ($result2['send_user_id'] === $user_id) {
-                    echo "<button type=\"submit\" id=\"delete_com\" name=\"delete_com\" value=\"$reply_post_id\">削除</button>";
+                    $reply_post_id = $replyPosts['reply_post_id'];
+                    if ($replyPosts['send_user_id'] === $user_id) {
+                        echo "<button type=\"submit\" id=\"delete_com\"
+                         name=\"delete_com\" value=\"$reply_post_id\">
+                         削除</button>";
 
                 echo '</div>';
 
