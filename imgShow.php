@@ -79,7 +79,7 @@ $tpath = "$folder_thumbs/$image_id.$image_ext";
 if (is_file($fpath)) {
     header("Content-Type: $image_type");
     
-    if ($th != "" && is_file($tpath)) {
+    if ($th !== "" && is_file($tpath)) {
     
         //サムネイル画像表示
         @readfile($tpath);

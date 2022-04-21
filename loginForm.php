@@ -29,20 +29,20 @@ if (empty($_POST['user_mail']) || empty($_POST['user_pass'])) {
     try {
     
         //メールアドレスからusersテーブルを検索した結果を取得する
-        $result_all = $dbLib->getUsersFromMail($_POST['user_mail']);
+        $usersAll = $dbLib->getUsersFromMail($_POST['user_mail']);
 
         //入力されたメールアドレスに一致する行が存在しない
-        if (empty($result_all)) {
+        if (empty($usersAll)) {
         
             $msg = 'メールアドレスが間違っています。';
             $outputMessage = ERROR_MAIL;
         
         } else {
         
-            foreach ($result_all as $result) {
+            foreach ($usersAll as $users) {
             
                 //入力されたパスワードが一致しない
-                if (!password_verify($_POST['user_pass'], $result['user_pass'])) {
+                if (!password_verify($_POST['user_pass'], $users['user_pass'])) {
 
                     $msg = 'パスワードが間違っています。';   
                     $outputMessage = ERROR_PASS;
@@ -50,8 +50,8 @@ if (empty($_POST['user_mail']) || empty($_POST['user_pass'])) {
                 } else {
                     
                     //DBのユーザー情報をセッションに保存
-                    $_SESSION['user_id'] = $result['user_id'];
-                    $_SESSION['user_name'] = $result['user_name'];
+                    $_SESSION['user_id'] = $users['user_id'];
+                    $_SESSION['user_name'] = $users['user_name'];
 
                     //掲示板に遷移する
                     header("Location:index.php");

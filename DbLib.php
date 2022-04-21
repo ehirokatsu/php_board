@@ -7,7 +7,7 @@ class DbLib extends BaseDbLib
      * usersテーブルから指定したメールアドレスを持つユーザを検索する
      *
      * @param string $user_mail メールアドレス
-     * @return array $result_all　結果行
+     * @return array $usersAll　結果行
      */
     public function getUsersFromMail($user_mail)
     {
@@ -20,12 +20,12 @@ class DbLib extends BaseDbLib
         $stmt->bindValue(':user_mail', $user_mail, PDO::PARAM_STR);
         $stmt->execute();
         
-        $result_all = $stmt->fetchAll();
+        $usersAll = $stmt->fetchAll();
         
         //データベース切断処理
         $this->disconnectDb($stmt, $dbh);
         
-        return $result_all;
+        return $usersAll;
     }
     
     /**
@@ -56,7 +56,7 @@ class DbLib extends BaseDbLib
         $dbh = $this->connectDb();
         
         //投稿内容を削除する
-        $sql = "delete from $table_name where $id_name = :post_id";
+        $sql = "DELETE FROM $table_name WHERE $id_name = :post_id";
         $stmt = $dbh->prepare($sql);
         $stmt->bindValue(':post_id', $post_id, PDO::PARAM_INT);
         $stmt->execute();
@@ -94,7 +94,7 @@ class DbLib extends BaseDbLib
         
         $sql = "SELECT * FROM $table_name, users
                 WHERE $table_name.send_user_id = users.user_id
-                 and $table_name.$id_name = :post_id";
+                 AND $table_name.$id_name = :post_id";
         $stmt = $dbh->prepare($sql);
         $stmt->bindValue(':post_id', $post_id, PDO::PARAM_INT);
         $stmt->execute();

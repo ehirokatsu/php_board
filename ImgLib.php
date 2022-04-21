@@ -31,9 +31,9 @@ class ImgLib
             $dbh = $dbLib->connectDb();
         
             //一覧表示するSQL文
-            $sql = "select image_id, image_ext, image_type, image_name, image_date
-                    from images
-                    where image_id = :image_id";
+            $sql = "SELECT image_id, image_ext, image_type, image_name, image_date
+                    FROM images
+                    WHERE image_id = :image_id";
             
             $stmt = $dbh->prepare($sql);
             
@@ -41,7 +41,7 @@ class ImgLib
 
             $stmt->execute();
 
-            $result_all = $stmt->fetchAll();
+            $imgInfosAll = $stmt->fetchAll();
 
             //データベース切断処理
             $dbLib->disconnectDb($stmt, $dbh);
@@ -52,13 +52,13 @@ class ImgLib
         }
 
         //引数の画像IDが存在する場合
-        foreach ($result_all as $result) {
+        foreach ($imgInfosAll as $imgInfos) {
             
             //画像ID
-            $image_id = $result['image_id'];
+            $image_id = $imgInfos['image_id'];
             
             //画像の拡張子
-            $image_ext = $result['image_ext'];
+            $image_ext = $imgInfos['image_ext'];
             
             //ファイル名を定義する（ID＋拡張子にする）
             $bname = "$image_id.$image_ext";
@@ -145,9 +145,9 @@ class ImgLib
             $dbh = $dbLib->connectDb();
 
             //ファイル情報をINSERTするSQLを設定
-            $sql = 'insert into images
+            $sql = 'INSERT INTO images
                     (image_name, image_ext, image_type, image_date)
-             values (:image_name, :image_ext, :image_type, :image_date)';
+                     VALUES (:image_name, :image_ext, :image_type, :image_date)';
             $stmt = $dbh->prepare($sql);
             
             //拡張子

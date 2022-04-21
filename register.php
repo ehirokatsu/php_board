@@ -57,10 +57,10 @@ if (!isset($_SERVER['REQUEST_METHOD'])
     try {
 
         //メールアドレスからusersテーブルを検索した結果を取得する
-        $result_all = $dbLib->getUsersFromMail($_POST['user_mail']);
+        $usersAll = $dbLib->getUsersFromMail($_POST['user_mail']);
         
         //入力されたメールアドレスに一致する行が存在する場合
-        if (!empty($result_all)) {
+        if (!empty($usersAll)) {
         
             $outputMessage = ERROR_MAIL;
             
@@ -73,9 +73,9 @@ if (!isset($_SERVER['REQUEST_METHOD'])
             $sql = "INSERT INTO users(user_name, user_pass, user_mail, user_image_id)
                     VALUES (:user_name, :user_pass, :user_mail, :user_image_id)";
             $stmt = $dbh->prepare($sql);
-            $stmt->bindValue(':user_name', $_POST['user_name'], PDO::PARAM_STR)
+            $stmt->bindValue(':user_name', $_POST['user_name'], PDO::PARAM_STR);
             $stmt->bindValue(':user_pass', $user_pass, PDO::PARAM_STR);
-            $stmt->bindValue(':user_mail', $_POST['user_mail'], PDO::PARAM_STR)
+            $stmt->bindValue(':user_mail', $_POST['user_mail'], PDO::PARAM_STR);
             $stmt->bindValue(':user_image_id', $image_id, PDO::PARAM_INT);
             $stmt->execute();
             

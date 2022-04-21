@@ -1,16 +1,7 @@
-<!DOCTYPE html PUBLIC "-// W3C// DTD XHTML 1.0 Transitional// EN"
- "http:// www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http:// www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
-<head>
-<meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />
-<title>PHP 掲示板</title>
-<link rel="stylesheet" type="text/css" href="style.css">
-</head>
-<body>
-
-<h1>掲示板（フルスクラッチ）</h1>
-
 <?php
+
+$showPosts = [
+];
 
 //共通変数を使用する
 require_once( dirname(__FILE__). '/define.inc');
@@ -31,17 +22,19 @@ $today = date("Y-m-d H:i:s");
 //セッションを開始
 session_start();
 
+//ログインしている場合のフラグ
+$loginFlag = false;
+
 //ログインしているとき
 if (isset($_SESSION['user_id'])) {
 
     //ユーザー名を取得
-    $loginUserName = $_SESSION['user_name'];
-    
-    //ユーザー名出力用
-    $msg = htmlspecialchars($loginUserName, \ENT_QUOTES, 'UTF-8');
+    $loginUserName = htmlspecialchars($_SESSION['user_name'], \ENT_QUOTES, 'UTF-8');
     
     //ログアウト用リンク
     $link = '<a href="logout.php">ログアウト</a>';
+    
+    $loginFlag = true;
     
     //ファイル情報をデータベースから取得
     try {
@@ -50,23 +43,20 @@ if (isset($_SESSION['user_id'])) {
         $dbh = $dbLib->connectDb();
 
         //ログインしているユーザーのプロフィール画像を取得する
-        $sql = "select image_id, image_ext, image_type, image_name, image_date
-                from users, images
-                where users.user_image_id = images.image_id and user_id = :user_id";
+        $sql = "SELECT image_id, image_ext, image_type, image_name, image_date
+                FROM users, images
+                WHERE users.user_image_id = images.image_id AND user_id = :user_id";
         $stmt = $dbh->prepare($sql);
         $stmt->bindValue(':user_id', $_SESSION['user_id'], PDO::PARAM_INT);
         $stmt->execute();
         $userImgsAll_all = $stmt->fetchAll();
         
-        //ログインしているユーザーのプロフィール画像を取得する
         foreach ($userImgsAll_all as $userImgs) {
         
             $user_image_id = $userImgs['image_id'];
             $userImgInfos= $imgLib->getImgInfos($user_image_id);
             
         }
-
-        $user_id = $_SESSION['user_id'];
 
         //投稿の削除ボタンが押下された場合
         if (isset($_POST['delete']) && is_string($_POST['delete'])) {
@@ -81,13 +71,12 @@ if (isset($_SESSION['user_id'])) {
             //返信テーブルから返信内容を削除する
             $dbLib->deletePost('replyboard', (int)$_POST['delete_com']);
 
-            //元投稿の返信フラグをオフにする
         }
 
         //返信にチェックが入っていた場合
         if (!empty($_POST['reply'])) {
         
-            //画像があれば登録する
+            //投稿に画像が無い場合の初期化用
             $image_id = 0;
             
             if (isset($_SERVER['REQUEST_METHOD'])) {
@@ -105,36 +94,36 @@ if (isset($_SESSION['user_id'])) {
                 $image_id = $imgLib->registerImg($_FILES);
             }
             
-            //$src_post_id = NULL;
+            //リプライテーブルに格納する元投稿の投稿ID
             $src_post_id = (int)$_POST['reply'];
 
-        
             //データベース接続処理
             $dbh = $dbLib->connectDb();
 
             //元投稿のリプライフラグをONにする
-            $sql = 'update bulletinboard set reply_flag = true where post_id = :post_id';
+            $sql = 'UPDATE bulletinboard SET reply_flag = true WHERE post_id = :post_id';
             $stmt = $dbh->prepare($sql);
             $stmt->bindValue(':post_id', $src_post_id, PDO::PARAM_INT);
             $stmt->execute();
 
-
-            //投稿内容をリプライ用テーブルにinsertする
+            //投稿内容をリプライテーブルにinsertする
             if (isset($_POST['post_text']) && !empty($_POST['post_text'])) {
+            
                 //投稿内容をinsert
-                $sql = 'insert into replyboard
+                $sql = 'INSERT INTO replyboard
                  (send_date, post_text, post_image_id, send_user_id, src_post_id)
-                 values (:date, :post_text, :post_image_id, :send_user_id, :src_post_id)';
+                 VALUES (:date, :post_text, :post_image_id, :send_user_id, :src_post_id)';
                 $stmt = $dbh->prepare($sql);
                 $stmt->bindValue(':date', $today);
                 $stmt->bindValue(':post_text', $_POST['post_text'], PDO::PARAM_STR);            $stmt->bindValue(':post_image_id', $image_id, PDO::PARAM_INT);
-                $stmt->bindValue(':send_user_id', $user_id, PDO::PARAM_INT);
+                $stmt->bindValue(':send_user_id', $_SESSION['user_id'], PDO::PARAM_INT);
                 $stmt->bindValue(':src_post_id', $src_post_id, PDO::PARAM_INT);
                 $stmt->execute();
+                
             }
         } else {
 
-            //画像があれば登録する
+            //投稿に画像が無い場合の初期化用
             $image_id = 0;
             
             if (!empty($_FILES)) {
@@ -164,7 +153,7 @@ if (isset($_SESSION['user_id'])) {
                 $stmt = $dbh->prepare($sql);
                 $stmt->bindValue(':date', $today, PDO::PARAM_STR);
                 $stmt->bindValue(':post_text', $_POST['post_text'], PDO::PARAM_STR);            $stmt->bindValue(':post_image_id', $image_id, PDO::PARAM_INT);
-                $stmt->bindValue(':send_user_id', $user_id, PDO::PARAM_INT);
+                $stmt->bindValue(':send_user_id', $_SESSION['user_id'], PDO::PARAM_INT);
                 $stmt->execute();
             }
         }
@@ -180,21 +169,50 @@ if (isset($_SESSION['user_id'])) {
 //ログインしていない時
 } else {
     echo 'ログインしていません<br>';
-    echo '<a href="login.php">ログイン</a>';
+    echo '<a href="loginForm.php">ログイン</a>';
     exit();
 }
 
 ?>
 
+
+<!DOCTYPE html PUBLIC "-// W3C// DTD XHTML 1.0 Transitional// EN"
+ "http:// www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http:// www.w3.org/1999/xhtml" xml:lang="ja" lang="ja">
+<head>
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8" />
+<title>PHP 掲示板</title>
+<link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+
+<h1>掲示板（フルスクラッチ）</h1>
+
 <div class="center">
-    <?php echo $link; ?>
+
+<?php
+//ログインしている場合
+if ($loginFlag) {
+
+    echo '<a href="logout.php">ログアウト</a>';
+
+//ログインしていない場合
+} else {
+
+    echo 'ログインしていません<br>';
+    echo '<a href="login.php">ログイン</a>';
+    exit();
+    
+}
+?>
+
 </div>
 <div class="container_post">
 
     <div class="item_post">
         <a href="<?= $userImgInfos['imgFPath']; ?>">
         <img src="<?= $userImgInfos['imgTPath']; ?>" alt="<?= $userImgInfos['imgBName']; ?>" width="50" border="0"></a>
-    <?php echo $msg; ?>
+    <?php echo $loginUserName; ?>
     </div>
     <div class="item_post">
         
@@ -230,7 +248,7 @@ $dbh = $dbLib->connectDb();
 //投稿テーブルとユーザーテーブルを連結して内容を全て取得する
 $sql = 'SELECT * FROM bulletinboard, users
         WHERE bulletinboard.send_user_id = users.user_id
-         order by post_id desc';
+         ORDER BY post_id DESC';
 $stmt = $dbh->prepare($sql);
 $stmt->execute();
 $posts_all = $stmt->fetchAll();
@@ -244,15 +262,15 @@ foreach ($posts_all as $posts) {
         $user_image_id = $dbLib->getImgIdFromPostId('bulletinboard', $posts['post_id']);
 
         //画像情報を取得する
-        $imgInfos = $imgLib->getImgInfos($user_image_id);
-        $imgFPath = $imgInfos['imgFPath'];
-        $imgTPath = $imgInfos['imgTPath'];
-        $imgBName = $imgInfos['imgBName'];
+        $userImgInfos = $imgLib->getImgInfos($user_image_id);
+        $userImgFPath = $userImgInfos['imgFPath'];
+        $userImgTPath = $userImgInfos['imgTPath'];
+        $userImgBName = $userImgInfos['imgBName'];
 
         //プロフィール画像があれば表示する
-        if ($imgFPath !== '') {
-            echo "<a href=\"$imgFPath\">";
-            echo "<img src=\"$imgTPath\" alt=\"$imgBName\" width=\"50\"
+        if ($userImgFPath !== '') {
+            echo "<a href=\"$userImgFPath\">";
+            echo "<img src=\"$userImgTPath\" alt=\"$userImgBName\" width=\"50\"
              border=\"0\"></a>";
         }
 
@@ -268,14 +286,14 @@ foreach ($posts_all as $posts) {
         echo $posts['post_text'];
         echo '<br>';
         //画像IDから画像を表示す
-        $imgInfos = $imgLib->getImgInfos($posts['post_image_id']);
-        $imgFPath = $imgInfos['imgFPath'];
-        $imgTPath = $imgInfos['imgTPath'];
-        $imgBName = $imgInfos['imgBName'];
+        $postImgInfos = $imgLib->getImgInfos($posts['post_image_id']);
+        $postImgFPath = $postImgInfos['imgFPath'];
+        $postImgTPath = $postImgInfos['imgTPath'];
+        $postImgBName = $postImgInfos['imgBName'];
       
-        if ($imgFPath !== '') {
-            echo "<a href=\"$imgFPath\">";
-            echo "<img src=\"$imgTPath\" alt=\"$imgBName\" width=\"100\" border=\"0\"></a>";
+        if ($postImgFPath !== '') {
+            echo "<a href=\"$postImgFPath\">";
+            echo "<img src=\"$postImgTPath\" alt=\"$postImgBName\" width=\"100\" border=\"0\"></a>";
         }
   
     echo '</div>';
@@ -295,8 +313,8 @@ foreach ($posts_all as $posts) {
     echo '</div>';
     echo '<div class="item_board">';
     
-        //投稿がログインしているユーザなら削除ボタンを表示する
-        if ($posts['send_user_id'] === $user_id) {
+        //ログインユーザの投稿なら削除ボタンを表示する
+        if ($posts['send_user_id'] === $_SESSION['user_id']) {
         
             echo "<button type=\"submit\" id=\"delete\" name=\"delete\"
              value=\"$post_id\">削除</button>";
@@ -305,7 +323,22 @@ foreach ($posts_all as $posts) {
         
     echo '</div>';
 
-    
+    $showPosts[] = [
+        'userImgFPath'      => $userImgFPath,
+        'userImgTPath'      => $userImgTPath,
+        'userImgBName'      => $userImgBName,
+        'userName'          => $posts['user_name'],
+        'date'              => $posts['send_date'],
+        'post'              => $posts['post_text'],
+        'postImgFPath'      => $postImgFPath,
+        'postImgTPath'      => $postImgTPath,
+        'postImgFPath'      => $postImgBName,
+        'replyPostId'       => $post_id,
+        'sendUserId'        => $posts['send_user_id'],
+        'deleteButtonId'    => $post_id,
+    ];
+//var_dump($showPosts);
+
     //投稿に返信がある場合
     if ($posts['reply_flag']) {
     
@@ -317,8 +350,8 @@ foreach ($posts_all as $posts) {
             //返信投稿テーブルとユーザーテーブルを連結して内容を取得する
             $sql = 'SELECT * FROM replyboard, users
                     WHERE replyboard.send_user_id = users.user_id
-                    and src_post_id = :src_post_id
-                    order by reply_post_id desc';
+                    AND src_post_id = :src_post_id
+                    ORDER BY reply_post_id DESC';
             $stmtReply = $dbh->prepare($sql);
             $stmtReply->bindValue(':src_post_id', $posts['post_id'], PDO::PARAM_INT);
             $stmtReply->execute();
@@ -377,8 +410,11 @@ foreach ($posts_all as $posts) {
                 echo '<div class="item_board">';
                 echo '</div>';
                 echo '<div class="item_board">';
+                
+                    //ログインユーザの投稿なら削除ボタンを表示する
                     $reply_post_id = $replyPosts['reply_post_id'];
-                    if ($replyPosts['send_user_id'] === $user_id) {
+                    if ($replyPosts['send_user_id'] === $_SESSION['user_id']) {
+                    
                         echo "<button type=\"submit\" id=\"delete_com\"
                          name=\"delete_com\" value=\"$reply_post_id\">
                          削除</button>";
