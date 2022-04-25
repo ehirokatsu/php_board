@@ -8,9 +8,6 @@ require_once( dirname(__FILE__). '/env.inc');
 require_once( dirname(__FILE__). '/SessionLib.php');
 $sessionLib = new SessionLib();
 
-//メッセージ出力用初期化
-$outputMessage = ERROR_POST;
-
 //セッションを開始
 $sessionLib->mySession_start();
 

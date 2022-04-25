@@ -24,18 +24,18 @@ $today = date("Y-m-d H:i:s");
 $sessionLib->mySession_start();
 
 //投稿内容の表示用バッファ
-$showPosts = [];
+$boardPosts = [];
 
 //メッセージ出力用初期化
-$outputMessage = ERROR_POST;
+$message = ERROR_POST;
 
 //POSTメソッド以外から遷移した場合
 if (isset($_SERVER['REQUEST_METHOD'])
  && $_SERVER['REQUEST_METHOD'] !== "POST"
 ) {
 
-    $outputMessage = ERROR_POST;
-    header("Location: http://{$_SERVER["SERVER_NAME"]}/board/logout.php?outputMessage=$outputMessage");
+    $message = ERROR_POST;
+    header("Location: http://{$_SERVER["SERVER_NAME"]}/board/logout.php?message=$message");
 
 }
 
@@ -44,8 +44,8 @@ if (isset($_SESSION['ticket'])
  && $_SESSION['ticket'] !== $_POST['ticket']
 ) {
 
-    $outputMessage = ERROR_SESSION;
-    header("Location: http://{$_SERVER["SERVER_NAME"]}/board/logout.php?outputMessage=$outputMessage");
+    $message = ERROR_SESSION;
+    header("Location: http://{$_SERVER["SERVER_NAME"]}/board/logout.php?message=$message");
 
 } 
 
@@ -56,15 +56,15 @@ if (isset($_SERVER['REQUEST_METHOD'])
  && !isset($_SESSION['user_name'])
 ) {
 
-    //入力されたメールアドレスとパスワードがNULLや空白
+    //入力されたメールアドレスとパスワードがNULLや空白、文字列以外
     if (empty($_POST['user_mail'])
      || empty($_POST['user_pass'])
      || !is_string($_POST['user_mail'])
      || !is_string($_POST['user_pass'])
      ) {
 
-        $outputMessage = ERROR_ILLEGAL;
-        header("Location: http://{$_SERVER["SERVER_NAME"]}/board/logout.php?outputMessage=$outputMessage");
+        $message = ERROR_ILLEGAL;
+        header("Location: http://{$_SERVER["SERVER_NAME"]}/board/logout.php?message=$message");
         
     }
 
@@ -74,16 +74,16 @@ if (isset($_SERVER['REQUEST_METHOD'])
     //入力されたメールアドレスに一致する行が存在しない
     if (empty($users)) {
     
-        $outputMessage = ERROR_MAIL;
-        header("Location: http://{$_SERVER["SERVER_NAME"]}/board/logout.php?outputMessage=$outputMessage");
+        $message = ERROR_MAIL;
+        header("Location: http://{$_SERVER["SERVER_NAME"]}/board/logout.php?message=$message");
         
     }
 
     //入力されたパスワードが一致しない
     if (!password_verify($_POST['user_pass'], $users['user_pass'])) {
     
-        $outputMessage = ERROR_PASS;
-        header("Location: http://{$_SERVER["SERVER_NAME"]}/board/logout.php?outputMessage=$outputMessage");
+        $message = ERROR_PASS;
+        header("Location: http://{$_SERVER["SERVER_NAME"]}/board/logout.php?message=$message");
         
     }
     
@@ -124,8 +124,8 @@ if (isset($_SERVER['REQUEST_METHOD'])
     $_SESSION['ticket'] = $ticket;
 }
 
-//ユーザー名を取得
-$loginUserName = htmlspecialchars($_SESSION['user_name'], ENT_QUOTES, 'UTF-8');
+//表示するユーザー名を取得
+$htmlUserName = htmlspecialchars($_SESSION['user_name'], ENT_QUOTES, 'UTF-8');
 
 try {
 
@@ -148,14 +148,14 @@ try {
     }
 
     //投稿の削除ボタンが押下された場合
-    if (isset($_POST['delete']) && is_string($_POST['delete'])) {
+    if (!empty($_POST['delete']) && is_string($_POST['delete'])) {
 
         //投稿テーブルから投稿内容を削除する
         $dbLib->deletePost('bulletinboard', (int)$_POST['delete']);
 
     }
     //返信投稿の削除ボタンが押下された場合
-    if (isset($_POST['delete_com']) && is_string($_POST['delete_com'])) {
+    if (!empty($_POST['delete_com']) && is_string($_POST['delete_com'])) {
 
         //返信テーブルから返信内容を削除する
         $dbLib->deletePost('replyboard', (int)$_POST['delete_com']);
@@ -163,7 +163,7 @@ try {
     }
 
     //返信にチェックが入っていた場合
-    if (!empty($_POST['reply'])) {
+    if (!empty($_POST['reply']) && is_string($_POST['reply'])) {
     
         //投稿に画像が無い場合の初期化用
         $image_id = 0;
@@ -230,44 +230,47 @@ try {
              ORDER BY post_id DESC';
     $stmt = $dbh->prepare($sql);
     $stmt->execute();
-    $posts_all = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $postsAll = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    foreach ($posts_all as $posts) {
+    foreach ($postsAll as $posts) {
 
         //投稿したユーザのプロフィール画像IDを取得する
         $user_image_id = $dbLib->getImgIdFromPost('bulletinboard', $posts['post_id']);
 
         //投稿ユーザーのプロフィール画像を取得する
         $userImgShowInfos = $imgLib->getImgShowInfos($user_image_id);
-        $userImgFPath = $userImgShowInfos['imgFPath'];
-        $userImgTPath = $userImgShowInfos['imgTPath'];
-        $userImgIName = $userImgShowInfos['imgIName'];
-
+        $userImgPath = $userImgShowInfos['imgPath'];
+        $userImgThumbnailPath = $userImgShowInfos['imgThumbnailPath'];
+        $userImgName = $userImgShowInfos['imgName'];
 
         //投稿内容の画像を取得する
         $postImgShowInfos = $imgLib->getImgShowInfos($posts['post_image_id']);
-        $postImgFPath = $postImgShowInfos['imgFPath'];
-        $postImgTPath = $postImgShowInfos['imgTPath'];
-        $postImgIName = $postImgShowInfos['imgIName'];
+        $postImgPath = $postImgShowInfos['imgPath'];
+        $postImgThumbnailPath = $postImgShowInfos['imgThumbnailPath'];
+        $postImgName = $postImgShowInfos['imgName'];
       
         //返信ラジオボタンのValueに投稿IDを埋め込む用
         $post_id = (int)$posts['post_id'];
+        
+        //表示用にエスケープ処理を行う
+        $htmlPostUserName = htmlspecialchars($posts['user_name'], ENT_QUOTES, 'UTF-8');
+        $htmlPostText = htmlspecialchars($posts['post_text'], ENT_QUOTES, 'UTF-8');
 
         //表示用配列に格納する
-        $showPosts[] = [
-            'isReply'           => 'false',             //通常投稿
-            'userImgFPath'      => $userImgFPath,       //画像パス
-            'userImgTPath'      => $userImgTPath,       //サムネイルパス
-            'userImgIName'      => $userImgIName,       //ユーザ画像名
-            'userName'          => $posts['user_name'], //投稿者名
-            'date'              => $posts['send_date'], //投稿日時
-            'post'              => $posts['post_text'], //投稿内容
-            'postImgFPath'      => $postImgFPath,       //投稿画像パス
-            'postImgTPath'      => $postImgTPath,       //投稿サムネイル
-            'postImgIPath'      => $postImgIName,       //投稿画像名
-            'replyPostId'       => $post_id,            //返信用
+        $boardPosts[] = [
+            'isReply'           => 'false',                  //通常投稿
+            'userImgPath'       => $userImgPath,             //画像パス
+            'userImgThumbnailPath'=> $userImgThumbnailPath, //サムネイルパス
+            'userImgName'       => $userImgName,             //ユーザ画像名
+            'userName'          => $htmlPostUserName,        //投稿者名
+            'date'              => $posts['send_date'],      //投稿日時
+            'post'              => $htmlPostText, //投稿内容
+            'postImgPath'       => $postImgPath,            //投稿画像パス
+            'postImgThumbnailPath'=> $postImgThumbnailPath, //投稿サムネイル
+            'postImgIPath'      => $postImgName,            //投稿画像名
+            'replyPostId'       => $post_id,                //返信用
             'sendUserId'        => $posts['send_user_id'],//投稿ユーザＩＤ
-            'deleteButtonId'    => $post_id,            //削除用
+            'deleteButtonId'    => $post_id,                //削除用
         ];
 
 
@@ -296,32 +299,35 @@ try {
                 
                 //画像情報を取得する
                 $userImgShowInfos = $imgLib->getImgShowInfos($user_image_id);
-                $userImgFPath = $userImgShowInfos['imgFPath'];
-                $userImgTPath = $userImgShowInfos['imgTPath'];
-                $userImgIName = $userImgShowInfos['imgIName'];
+                $userImgPath = $userImgShowInfos['imgPath'];
+                $userImgThumbnailPath = $userImgShowInfos['imgThumbnailPath'];
+                $userImgName = $userImgShowInfos['imgName'];
 
                 //投稿内容の画像を取得する
                 $replyPostImgShowInfos
                  = $imgLib->getImgShowInfos($replyPosts['post_image_id']);
-                $replyPostImgFPath = $replyPostImgShowInfos['imgFPath'];       
-                $replyPostImgTPath = $replyPostImgShowInfos['imgTPath'];
-                $replyPostImgIName = $replyPostImgShowInfos['imgIName'];
+                $replyPostImgPath = $replyPostImgShowInfos['imgPath'];       
+                $replyPostImgThumbnailPath = $replyPostImgShowInfos['imgThumbnailPath'];
+                $replyPostImgName = $replyPostImgShowInfos['imgName'];
 
                 //削除ボタンのValueに投稿IDを埋め込む用
                 $reply_post_id = $replyPosts['reply_post_id'];
                 
+                $htmlReplyPostUserName = htmlspecialchars($replyPosts['user_name'], ENT_QUOTES, 'UTF-8');
+                $htmlReplyPostText = htmlspecialchars($replyPosts['post_text'], ENT_QUOTES, 'UTF-8');
+        
                 //表示用配列に格納する
-                $showPosts[] = [
+                $boardPosts[] = [
                     'isReply'           => 'true',          //返信投稿
-                    'userImgFPath'      => $userImgFPath,
-                    'userImgTPath'      => $userImgTPath,
-                    'userImgIName'      => $userImgIName,
-                    'userName'          => $replyPosts['user_name'],
+                    'userImgPath'      => $userImgPath,
+                    'userImgThumbnailPath'=> $userImgThumbnailPath,
+                    'userImgName'      => $userImgName,
+                    'userName'          => $htmlReplyPostUserName,
                     'date'              => $replyPosts['send_date'],
-                    'post'              => $replyPosts['post_text'],
-                    'postImgFPath'      => $replyPostImgFPath,
-                    'postImgTPath'      => $replyPostImgTPath,
-                    'postImgIPath'      => $replyPostImgIName,
+                    'post'              => $htmlReplyPostText,
+                    'postImgPath'      => $replyPostImgPath,
+                    'postImgThumbnailPath'=> $replyPostImgThumbnailPath,
+                    'postImgIPath'      => $replyPostImgName,
                     'replyPostId'       => $reply_post_id,
                     'sendUserId'        => $replyPosts['send_user_id'],
                     'deleteButtonId'    => $reply_post_id,
@@ -362,11 +368,11 @@ try {
 <div class="container_post">
     <!-- ログインユーザ名とプロフィール画像 -->
     <div class="item_post">
-        <a href="<?= $loginImgShowInfos['imgFPath']; ?>"
+        <a href="<?= $loginImgShowInfos['imgPath']; ?>"
          target="_blank" rel="noopener noreferrer">
-        <img src="<?= $loginImgShowInfos['imgTPath']; ?>"
-         alt="<?= $loginImgShowInfos['imgIName']; ?>" width="50" border="0"></a>
-        <?php echo $loginUserName; ?>
+        <img src="<?= $loginImgShowInfos['imgThumbnailPath']; ?>"
+         alt="<?= $loginImgShowInfos['imgName']; ?>" width="50" border="0"></a>
+        <?php echo $htmlUserName; ?>
     </div>
     <!-- レイアウト調整用 -->
     <div class="item_post">
@@ -383,7 +389,6 @@ try {
              maxlength=140></textarea >
         </div>
         <div class="item_post_file">
-            <input type="hidden" name="MAX_FILE_SIZE" value="1000000">
             添付ファイル(1M以内)：<input type="file" name="yourfile">
         </div>
           <div class="item_post"></div>
@@ -396,51 +401,50 @@ try {
 <br>
 
 <!-- 投稿内容を表示する -->
-<?php foreach ($showPosts as $showPost) { ?>
+<?php foreach ($boardPosts as $boardPost) { ?>
 
      <div class="container_board">
      
      <!-- プロフィール画像と投稿者名 -->
      <div class="item_board_user">
-       
-        <?php if ($showPost['userImgFPath'] !== '') { ?>
-             <a href="<?php echo $showPost['userImgFPath']; ?>"
+        <?php if ($boardPost['userImgPath'] !== '') { ?>
+             <a href="<?php echo $boardPost['userImgPath']; ?>"
               target="_blank" rel="noopener noreferrer">
-             <img src="<?php echo $showPost['userImgTPath']; ?>"
-              alt="<?php echo $showPost['userImgIName']; ?>"
+             <img src="<?php echo $boardPost['userImgThumbnailPath']; ?>"
+              alt="<?php echo $boardPost['userImgName']; ?>"
                width="50" border="0"></a>
         <?php } ?>
-        <?php if ($showPost['isReply'] === 'true') { ?>
+        <?php if ($boardPost['isReply'] === 'true') { ?>
             返信
          <?php } ?>
-         投稿者:<?php echo $showPost['userName']; ?>
+         投稿者:<?php echo $boardPost['userName']; ?>
      </div>
      
      <!-- 投稿日時 -->
      <div class="item_board_date">
-         <?php echo $showPost['date']; ?>
+         <?php echo $boardPost['date']; ?>
      </div>
      
      <!-- 投稿内容（テキストと画像） -->
      <div class="item_board_text">
-         <?php echo htmlspecialchars($showPost['post'], ENT_QUOTES, 'UTF-8'); ?> 
+         <?php echo htmlspecialchars($boardPost['post'], ENT_QUOTES, 'UTF-8'); ?> 
          <br>
-        <?php if ($showPost['postImgFPath'] !== '') { ?>
-             <a href="<?php echo $showPost['postImgFPath']; ?>"
+        <?php if ($boardPost['postImgPath'] !== '') { ?>
+             <a href="<?php echo $boardPost['postImgPath']; ?>"
               target="_blank" rel="noopener noreferrer">
-             <img src="<?php echo $showPost['postImgTPath']; ?>"
-              alt="<?php echo $showPost['postImgIPath']; ?>"
+             <img src="<?php echo $boardPost['postImgThumbnailPath']; ?>"
+              alt="<?php echo $boardPost['postImgIPath']; ?>"
                width="100" border="0"></a>
         <?php } ?>
      </div>
      
      <!-- 通常投稿なら返信ラジオボタンを表示する -->
      <div class="item_board">
-     <?php if ($showPost['isReply'] === 'false') { ?>
+     <?php if ($boardPost['isReply'] === 'false') { ?>
         
-         <input type="radio" id="reply<?php echo $showPost['replyPostId']; ?>"
-          name="reply" value="<?php echo $showPost['replyPostId']; ?>">
-         <label for="reply<?php echo $showPost['replyPostId']; ?>">返信　</label>
+         <input type="radio" id="reply<?php echo $boardPost['replyPostId']; ?>"
+          name="reply" value="<?php echo $boardPost['replyPostId']; ?>">
+         <label for="reply<?php echo $boardPost['replyPostId']; ?>">返信　</label>
      <?php } ?>
      </div>
      
@@ -452,10 +456,10 @@ try {
      
      <!-- ログインしているユーザの投稿なら削除ボタンを表示する -->
      <div class="item_board">
-        <?php if ($showPost['sendUserId'] === $_SESSION['user_id']) { ?>
+        <?php if ($boardPost['sendUserId'] === $_SESSION['user_id']) { ?>
         
              <button type="submit" id="delete" name="delete"
-             value="<?php echo $showPost['deleteButtonId']; ?>">削除</button>
+             value="<?php echo $boardPost['deleteButtonId']; ?>">削除</button>
 
         <?php } ?>
         

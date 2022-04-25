@@ -33,7 +33,6 @@
         <input type="text" id="user_pass" name="user_pass" required>
     </div>
     <div class="item_signup_left">
-        <input type="hidden" name="MAX_FILE_SIZE" value="1000000">
         プロフィール画像(1Mbyte以内)：
     </div>
     <div class="item_signup">

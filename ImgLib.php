@@ -15,9 +15,9 @@ class ImgLib
 
         //戻り値用の変数宣言
         $imgShowInfos = [
-                  'imgFPath'=>'',   //画像のパス
-                  'imgTPath'=>'',   //サムネイル画像のパス
-                  'imgIName'=>''    //画像のファイル名
+                  'imgPath'=>'',   //画像のパス
+                  'imgThumbnailPath'=>'',   //サムネイル画像のパス
+                  'imgName'=>''    //画像のファイル名
                   ];
           
         //データベース関数を使用する
@@ -71,9 +71,9 @@ class ImgLib
             $furl = "/board/imgShow.php?imgName=$imgName&imgType=$imgType";
             $turl = "/board/imgShow.php?imgName=$imgName&imgType=$imgType&th=y";
             //戻り値用の画像情報
-            $imgShowInfos['imgFPath'] = $furl;
-            $imgShowInfos['imgTPath'] = $turl;
-            $imgShowInfos['imgIName'] = $imgName;
+            $imgShowInfos['imgPath'] = $furl;
+            $imgShowInfos['imgThumbnailPath'] = $turl;
+            $imgShowInfos['imgName'] = $imgName;
 
 
         }

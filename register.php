@@ -17,36 +17,48 @@ $dbLib = new DbLib();
 $imgId = 0;
 
 //メッセージ出力用初期化
-$outputMessage = ERROR_POST;
+$message = ERROR_POST;
 
 //メソッドがPOST以外であればNG
 if (!isset($_SERVER['REQUEST_METHOD'])
  || $_SERVER['REQUEST_METHOD'] !== "POST"
 ) {
 
-    $outputMessage = ERROR_POST;
+    $message = ERROR_POST;
     
-//入力項目が空白はNG(NULLを含む)
+//入力項目が空白はNG(NULLを含む)。
+//$_FILES['yourfile']['error']は正常(0)だとempty判定されるのでissetを使う
 } elseif (empty($_POST['user_name'])
        || empty($_POST['user_mail'])
        || empty($_POST['user_pass'])
        || empty($_FILES['yourfile']['tmp_name'])
+       || empty($_FILES['yourfile']['name'])
+       || empty($_FILES['yourfile']['size'])
+       || empty($_FILES['yourfile']['type'])
+       || !isset($_FILES['yourfile']['error'])
 ) {
 
-    $outputMessage = ERROR_NULL;
+    $message = ERROR_NULL;
 
 //入力されたメールアドレスとパスワードが文字列以外はNG
+//sizeとerrorは数値なのでis_Numericを使う
 } elseif (!is_string($_POST['user_name'])
        || !is_string($_POST['user_mail'])
        || !is_string($_POST['user_pass'])
+       || !is_string($_FILES['yourfile']['tmp_name'])
+       || !is_string($_FILES['yourfile']['name'])
+       || !is_Numeric($_FILES['yourfile']['size'])
+       || !is_string($_FILES['yourfile']['type'])
+       || !is_Numeric($_FILES['yourfile']['error'])
+       
 ) { 
 
-    $outputMessage = ERROR_ILLEGA;
+    $message = ERROR_ILLEGAL;
         
 //アップロード画像の保管用ディレクトリ作成に失敗すればNG     
 } elseif (!is_dir($folder_files) && !mkdir($folder_files)) {
 
-    $outputMessage = ERROR_DIR;
+    $message = ERROR_DIR;
     
 } else {
 
@@ -64,7 +76,7 @@ if (!isset($_SERVER['REQUEST_METHOD'])
         //入力されたメールアドレスに一致する行が存在する場合
         if (!empty($users)) {
         
-            $outputMessage = ERROR_MAIL;
+            $message = ERROR_MAIL;
             
         } else {
         
@@ -75,16 +87,16 @@ if (!isset($_SERVER['REQUEST_METHOD'])
             $sql = "INSERT INTO users(user_name, user_pass, user_mail, user_image_id)
                     VALUES (:user_name, :user_pass, :user_mail, :user_image_id)";
             $stmt = $dbh->prepare($sql);
-            $stmt->bindValue(':user_name', $_POST['user_name'], PDO::PARAM_STR);
+            $stmt->bindValue(':user_name', $_POST['user_name'], PDO::PARAM_STR)
             $stmt->bindValue(':user_pass', $user_pass, PDO::PARAM_STR);
-            $stmt->bindValue(':user_mail', $_POST['user_mail'], PDO::PARAM_STR);
+            $stmt->bindValue(':user_mail', $_POST['user_mail'], PDO::PARAM_STR)
             $stmt->bindValue(':user_image_id', $imgId, PDO::PARAM_INT);
             $stmt->execute();
             
             //データベース切断処理
             $dbLib->disconnectDb($stmt, $dbh);
 
-            $outputMessage = CORRECT;
+            $message = CORRECT;
 
         }
         
@@ -115,7 +127,7 @@ if (!isset($_SERVER['REQUEST_METHOD'])
 
 
 //正常に新規登録完了した場合
-if ($outputMessage === CORRECT) {
+if ($message === CORRECT) {
 
     echo '会員登録が完了しました。<br>';
     echo '<a href="loginForm.php">ログインページ</a>';
@@ -124,23 +136,23 @@ if ($outputMessage === CORRECT) {
 } else {
 
     //エラー内容に応じてメッセージを表示する。
-    if ($outputMessage === ERROR_POST) {
+    if ($message === ERROR_POST) {
 
         echo 'アップロードが失敗しました。<br>';
         
-    } elseif ($outputMessage === ERROR_NULL) {
+    } elseif ($message === ERROR_NULL) {
 
-        echo '名前、メールアドレスまたはパスワードが空白です。<br>';
+        echo '名前、メールアドレス、パスワード、画像が空白です。<br>';
         
-    } elseif ($outputMessage === ERROR_ILLEGAL) {
+    } elseif ($message === ERROR_ILLEGAL) {
 
         echo '名前、メールアドレスまたはパスワードの値が不正です。<br>';
         
-    } elseif ($outputMessage === ERROR_DIR) {
+    } elseif ($message === ERROR_DIR) {
 
         echo '保管用ディレクトリを作ることができません。<br>';
 
-    } elseif ($outputMessage === ERROR_MAIL) {
+    } elseif ($message === ERROR_MAIL) {
 
         echo '同じメールアドレスが存在します。<br>';
     } else {

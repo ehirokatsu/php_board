@@ -9,11 +9,11 @@ require_once( dirname(__FILE__). '/SessionLib.php');
 $sessionLib = new SessionLib();
 
 //エラーメッセージ用
-$outputMessage = '';
+$message = '';
 
-if (isset($_GET['outputMessage']) && is_string($_GET['outputMessage'])) {
+if (isset($_GET['message']) && is_string($_GET['message'])) {
 
-    $outputMessage = $_GET['outputMessage'];
+    $message = $_GET['message'];
 
 }
 
@@ -46,33 +46,33 @@ session_destroy();
 
 <?php
 //エラー内容に応じてメッセージを表示する。
-if ($outputMessage === ERROR_POST) {
+if ($message === ERROR_POST) {
 
     echo '不正にアクセスされました。<br>';
 
-} elseif ($outputMessage === ERROR_NULL) {
+} elseif ($message === ERROR_NULL) {
 
     echo 'メールアドレスまたはパスワードが空白です。<br>';
     
-} elseif ($outputMessage === ERROR_ILLEGAL) {
+} elseif ($message === ERROR_ILLEGAL) {
 
     echo 'メールアドレスまたはパスワードの値が不正です。<br>';
 
-} elseif ($outputMessage === ERROR_MAIL) {
+} elseif ($message === ERROR_MAIL) {
 
     echo 'メールアドレスが間違っています。<br>';
     
-} elseif ($outputMessage === ERROR_PASS) {
+} elseif ($message === ERROR_PASS) {
 
     echo 'パスワードが間違っています。<br>';
     
-} elseif ($outputMessage === ERROR_SESSION) {
+} elseif ($message === ERROR_SESSION) {
 
     echo 'セッションエラーです。<br>';
    
 } else {
 
-    echo 'エラーが発生しました。<br>';
+    echo 'ログアウトしました。<br>';
 
 }
 ?>
