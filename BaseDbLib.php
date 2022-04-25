@@ -30,8 +30,8 @@ class BaseDbLib
             
         
         } catch (PDOException $e) {
-            print('Connection failed:'.$e -> getMessage());
-            die();
+            echo 'Connection failed:'.$e -> getMessage();
+            exit();
         }
         return $dbh;
     }

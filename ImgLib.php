@@ -3,21 +3,21 @@
 class ImgLib
 {
     /**
-     * 指定した画像IDのサムネイルを表示する。
+     * 指定した画像IDからDBを探索し、存在すれば画像情報を得る
      *
      * @param int $image_id 表示する画像ID
-     * @return void
+     * @return $imgShowInfos 画像のフルパス、サムネイルパス、名称を格納した配列
      */
-    public function getImgInfos($image_id)
+    public function getImgShowInfos($image_id)
     {
         //共通変数を使用する
         require( dirname(__FILE__). '/env.inc');
 
         //戻り値用の変数宣言
-        $imgInfos = [
+        $imgShowInfos = [
                   'imgFPath'=>'',   //画像のパス
                   'imgTPath'=>'',   //サムネイル画像のパス
-                  'imgBName'=>''    //画像のファイル名
+                  'imgIName'=>''    //画像のファイル名
                   ];
           
         //データベース関数を使用する
@@ -27,6 +27,7 @@ class ImgLib
         
         //ファイル情報をデータベースから取得
         try {
+        
             //データベース接続処理
             $dbh = $dbLib->connectDb();
         
@@ -41,56 +42,52 @@ class ImgLib
 
             $stmt->execute();
 
-            $imgInfosAll = $stmt->fetchAll();
+            $imgInfos = $stmt->fetch(PDO::FETCH_ASSOC);
 
             //データベース切断処理
             $dbLib->disconnectDb($stmt, $dbh);
             
         } catch (PDOException $e) {
-            print('Connection failed:'.$e -> getMessage());
+            echo 'Connection failed:'.$e -> getMessage();
             die();
         }
 
-        //引数の画像IDが存在する場合
-        foreach ($imgInfosAll as $imgInfos) {
-            
+        //DBの検索結果が存在する場合
+        if (!empty($imgInfos)) {
             //画像ID
-            $image_id = $imgInfos['image_id'];
+
+            $imgId = $imgInfos['image_id'];
             
             //画像の拡張子
-            $image_ext = $imgInfos['image_ext'];
+            $imgExt = $imgInfos['image_ext'];
             
+            //画像データのMIMEタイプ
+            $imgType = $imgInfos['image_type'];
+
             //ファイル名を定義する（ID＋拡張子にする）
-            $bname = "$image_id.$image_ext";
-            
-            //画像のフルパス
-            $fpath = "$folder_files/$image_id.$image_ext";
-            
-            //サムネイル画像のフルパス
-            $tpath = "$folder_thumbs/$image_id.$image_ext";
+            $imgName = "$imgId.$imgExt";
             
             //ファイルのURLを決定
-            $furl = "/board/imgShow.php?image_id=$image_id";
-            $turl = "/board/imgShow.php?image_id=$image_id&th=y";
-            
-            
-            $imgInfos['imgFPath'] = $furl;
-            $imgInfos['imgTPath'] = $turl;
-            $imgInfos['imgBName'] = $bname;
+            $furl = "/board/imgShow.php?imgName=$imgName&imgType=$imgType";
+            $turl = "/board/imgShow.php?imgName=$imgName&imgType=$imgType&th=y";
+            //戻り値用の画像情報
+            $imgShowInfos['imgFPath'] = $furl;
+            $imgShowInfos['imgTPath'] = $turl;
+            $imgShowInfos['imgIName'] = $imgName;
 
 
         }
-        return $imgInfos;
+        return $imgShowInfos;
 
     }
 
     /**
      * アップロードした画像を保存してDBに登録する
      *
-     * @param int $imageFile アップロードした画像情報
-     * @return int $image_id DBに登録した画像のID。失敗したら0を返却する
+     * @param int $imageFiles アップロードした画像情報
+     * @return int $imgId DBに登録した画像のID。失敗したら0を返却する
      */
-    public function registerImg($imageFile)
+    public function registerImg($imageFiles)
     {
 
         //共通変数を使用する
@@ -100,43 +97,54 @@ class ImgLib
         require_once( dirname(__FILE__). '/DbLib.php');
         $dbLib = new DbLib();
         
+        //戻り値初期化
+        $returnImgId = 0;
 
-        //プロフィール画像をアップロードしていない場合用の初期化
-        $image_id = 0;
+        //DBで採番する画像ID
+        $imgId = 0;
         
         //一時ディレクトリ格納時のパス名
-        $ftemp = $imageFile['yourfile']['tmp_name'];
+        $imgTemp = $imageFiles['yourfile']['tmp_name'];
         
         //元ファイル名
-        $fname = $imageFile['yourfile']['name'];
+        $imgName = $imageFiles['yourfile']['name'];
         
         //ファイルサイズ
-        $fsize = $imageFile['yourfile']['size'];
+        $imgSize = $imageFiles['yourfile']['size'];
             
         //MIMEタイプ(小文字に揃える)
-        $ftype = strtolower($imageFile['yourfile']['type']);
+        $imgType = strtolower($imageFiles['yourfile']['type']);
 
         //エラーコード（成功：０、エラー：正の整数）
-        $ferror = $imageFile['yourfile']['error'];
+        $imgError = $imageFiles['yourfile']['error'];
 
+        //保管用ディレクトリを確保
+        if (!is_dir($folder_files) && !mkdir($folder_files)) {
+        
+            return $returnImgId;
+                
+        }
+        
         //ファイルがPOSTで受信していない、サイズオーバー、エラー発生時
-        if (!is_uploaded_file($ftemp) || $fsize > $file_maxsize || $ferror > 0) {
-            return 0;
+        if (!is_uploaded_file($imgTemp)
+         || $imgSize > $file_maxsize
+         || $imgError > 0
+        ) {
+            return $returnImgId;
             
         }
         
         //MIMEタイプを確認
-        if ($ftype !== 'image/jpeg' && $ftype !== 'image/pjpeg') {
+        if ($imgType !== 'image/jpeg' && $imgType !== 'image/pjpeg') {
          
-            return 0;
+            return $returnImgId;
             
         }
         
         //ファイル名と拡張子を取得
-        $finfo = pathinfo($fname);
-        $fname = $finfo['basename'];
+        $finfo = pathinfo($imgName);
+        $imgName = $finfo['basename'];
         $fext = strtolower($finfo['extension']);
-        
         
         //ファイル情報をデータベースに登録
         try {
@@ -154,10 +162,10 @@ class ImgLib
             $stmt->bindValue(':image_ext', $fext, PDO::PARAM_STR);
             
             //MIMEタイプ
-            $stmt->bindValue(':image_type', $ftype, PDO::PARAM_STR);
+            $stmt->bindValue(':image_type', $imgType, PDO::PARAM_STR);
             
             //元ファイル名
-            $stmt->bindValue(':image_name', $fname, PDO::PARAM_STR);
+            $stmt->bindValue(':image_name', $imgName, PDO::PARAM_STR);
             
             //現在時刻を取得して使用する
             date_default_timezone_set('Asia/Tokyo');
@@ -168,30 +176,33 @@ class ImgLib
             $stmt->execute();
             
             //保存用ファイル名としてIDを使用する
-            $image_id = $dbh->lastInsertId();
+            $imgId = $dbh->lastInsertId();
             
             //データベース切断処理
             $dbLib->disconnectDb($stmt, $dbh);
             
         } catch (PDOException $e) {
-            print('Connection failed:'.$e -> getMessage());
-            die();
+            echo 'Connection failed:'.$e -> getMessage();
+            exit();
         }
         
         //画像データを名前変更してファイル保管用ディレクトリに移動させる
-        $fpath = "$folder_files/$image_id.$fext";
-        if (!move_uploaded_file($ftemp, $fpath)) {
-            return 0;
-            exit('保管用ディレクトリへの移動が失敗しました。');
+        $fpath = "$folder_files/$imgId.$fext";
+        if (!move_uploaded_file($imgTemp, $fpath)) {
+        
+            return $returnImgId;
+
         }
         
         //ファイルが画像なら読み取る
         $img = false;
-        if ($ftype === 'image/jpeg' || $ftype === 'image/pjpeg') {
-            $img = @imagecreatefromjpeg($fpath);
+        if ($imgType === 'image/jpeg' || $imgType === 'image/pjpeg') {
+        
+            $img = imagecreatefromjpeg($fpath);
+            
         }
         
-        //画像の読み取りが成功っし、かつサムネイル用ディレクトリが確保されるなら
+        //画像の読み取りが成功し、かつサムネイル用ディレクトリが確保された場合
         if ($img && (is_dir($folder_thumbs) || mkdir($folder_thumbs))) {
         
             //元画像の横幅
@@ -213,12 +224,17 @@ class ImgLib
             imagecopyresampled($thm, $img, 0, 0, 0, 0, $tw, $th, $iw, $ih);
             
             //サムネイル画像をサムネイル用フォルダに保存する
-            if ($ftype === 'image/jpeg' || $ftype === 'image/pjpeg') {
-                imagejpeg($thm, "$folder_thumbs/$image_id.$fext");
+            if ($imgType === 'image/jpeg' || $imgType === 'image/pjpeg') {
+            
+                imagejpeg($thm, "$folder_thumbs/$imgId.$fext");
+                
+                //全ての処理が完了したら戻り値に画像IDを格納する
+                $returnImgId = $imgId;
             }
+            
         }
         
-        return $image_id;
+        return $returnImgId;
        
     }
 }

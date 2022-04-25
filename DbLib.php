@@ -7,7 +7,7 @@ class DbLib extends BaseDbLib
      * usersテーブルから指定したメールアドレスを持つユーザを検索する
      *
      * @param string $user_mail メールアドレス
-     * @return array $usersAll　結果行
+     * @return array $users　結果行
      */
     public function getUsersFromMail($user_mail)
     {
@@ -20,12 +20,12 @@ class DbLib extends BaseDbLib
         $stmt->bindValue(':user_mail', $user_mail, PDO::PARAM_STR);
         $stmt->execute();
         
-        $usersAll = $stmt->fetchAll();
+        $users = $stmt->fetch(PDO::FETCH_ASSOC);
         
         //データベース切断処理
         $this->disconnectDb($stmt, $dbh);
         
-        return $usersAll;
+        return $users;
     }
     
     /**
@@ -48,8 +48,8 @@ class DbLib extends BaseDbLib
             $id_name = 'reply_post_id';
             
         } else {
-            print('指定されたテーブル名が無効です');
-            die();
+            echo '指定されたテーブル名が無効です';
+            exit();
         }
     
         //データベース接続処理
@@ -67,12 +67,16 @@ class DbLib extends BaseDbLib
     }
     
     /**
-     *投稿IDから画像情報（パス、サムネイルパス、ファイル名）を取得する
+     *投稿IDからユーザプロフィール画像情報
+     *（パス、サムネイルパス、ファイル名）を取得する
      * @param int $post_id 投稿ID
-     * @return パス、サムネイルパス、ファイル名
+     * @return 画像ID。DBに画像情報が無ければ0を返却する。
      */
-    public function getImgIdFromPostId($table_name, $post_id)
+    public function getImgIdFromPost($table_name, $post_id)
     {
+        
+        //戻り値の初期化
+        $imgId = 0;
     
         if ($table_name === 'bulletinboard') {
         
@@ -85,8 +89,9 @@ class DbLib extends BaseDbLib
             $id_name = 'reply_post_id';
             
         } else {
-            print('指定されたテーブル名が無効です');
-            die();
+            
+            return $imgId;
+            
         }
         
         //データベース接続処理
@@ -98,16 +103,19 @@ class DbLib extends BaseDbLib
         $stmt = $dbh->prepare($sql);
         $stmt->bindValue(':post_id', $post_id, PDO::PARAM_INT);
         $stmt->execute();
-        $imgIdsAll = $stmt->fetchAll();
+        $imgIds = $stmt->fetch(PDO::FETCH_ASSOC);
 
         //データベース切断処理
         $this->disconnectDb($stmt, $dbh);
         
-        foreach ($imgIdsAll as $imgIds) {
+        //DBに存在すれば、ユーザーのプロフィール画像IDを戻り値に格納する
+        if (!empty($imgIds)) {
 
-            return $imgIds['user_image_id'];
+            $imgId = $imgIds['user_image_id'];
             
         }
+        
+        return $imgId;
     }
     
 }

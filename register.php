@@ -14,15 +14,16 @@ require_once( dirname(__FILE__). '/DbLib.php');
 $dbLib = new DbLib();
 
 //プロフィール画像をアップロードしていない場合の初期化用
-$image_id = 0;
+$imgId = 0;
 
 //メッセージ出力用初期化
 $outputMessage = ERROR_POST;
 
 //メソッドがPOST以外であればNG
 if (!isset($_SERVER['REQUEST_METHOD'])
- || $_SERVER['REQUEST_METHOD'] !== "POST") {
- 
+ || $_SERVER['REQUEST_METHOD'] !== "POST"
+) {
+
     $outputMessage = ERROR_POST;
     
 //入力項目が空白はNG(NULLを含む)
@@ -30,14 +31,15 @@ if (!isset($_SERVER['REQUEST_METHOD'])
        || empty($_POST['user_mail'])
        || empty($_POST['user_pass'])
        || empty($_FILES['yourfile']['tmp_name'])
-       ) {
+) {
 
     $outputMessage = ERROR_NULL;
 
 //入力されたメールアドレスとパスワードが文字列以外はNG
 } elseif (!is_string($_POST['user_name'])
        || !is_string($_POST['user_mail'])
-       || !is_string($_POST['user_pass'])) { 
+       || !is_string($_POST['user_pass'])
+) { 
 
     $outputMessage = ERROR_ILLEGA;
         
@@ -49,7 +51,7 @@ if (!isset($_SERVER['REQUEST_METHOD'])
 } else {
 
     //アップロードされた画像をDBに登録して画像IDを取得する
-    $image_id = $imgLib->registerImg($_FILES);
+    $imgId = $imgLib->registerImg($_FILES);
 
     //入力パスワードをハッシュ化する
     $user_pass = password_hash($_POST['user_pass'], PASSWORD_DEFAULT);
@@ -57,10 +59,10 @@ if (!isset($_SERVER['REQUEST_METHOD'])
     try {
 
         //メールアドレスからusersテーブルを検索した結果を取得する
-        $usersAll = $dbLib->getUsersFromMail($_POST['user_mail']);
+        $users = $dbLib->getUsersFromMail($_POST['user_mail']);
         
         //入力されたメールアドレスに一致する行が存在する場合
-        if (!empty($usersAll)) {
+        if (!empty($users)) {
         
             $outputMessage = ERROR_MAIL;
             
@@ -76,7 +78,7 @@ if (!isset($_SERVER['REQUEST_METHOD'])
             $stmt->bindValue(':user_name', $_POST['user_name'], PDO::PARAM_STR);
             $stmt->bindValue(':user_pass', $user_pass, PDO::PARAM_STR);
             $stmt->bindValue(':user_mail', $_POST['user_mail'], PDO::PARAM_STR);
-            $stmt->bindValue(':user_image_id', $image_id, PDO::PARAM_INT);
+            $stmt->bindValue(':user_image_id', $imgId, PDO::PARAM_INT);
             $stmt->execute();
             
             //データベース切断処理
@@ -111,37 +113,42 @@ if (!isset($_SERVER['REQUEST_METHOD'])
 
 <?php
 
-//エラー内容に応じてメッセージを表示する。
-if ($outputMessage === ERROR_POST) {
 
-    echo 'アップロードが失敗しました。<br>';
-    echo '<a href="signup.php">戻る</a>';
-    
-} elseif ($outputMessage === ERROR_NULL) {
-
-    echo '名前、メールアドレスまたはパスワードが空白です。<br>';
-    echo '<a href="signup.php">戻る</a>';
-    
-} elseif ($outputMessage === ERROR_ILLEGAL) {
-
-    echo '名前、メールアドレスまたはパスワードの値が不正です。<br>';
-    echo '<a href="signup.php">戻る</a>';
-    
-} elseif ($outputMessage === ERROR_DIR) {
-
-    echo '保管用ディレクトリを作ることができません。<br>';
-    echo '<a href="signup.php">戻る</a>';
-    
-} elseif ($outputMessage === ERROR_MAIL) {
-
-    echo '同じメールアドレスが存在します。<br>';
-    echo '<a href="signup.php">戻る</a>';
-    
-} elseif ($outputMessage === CORRECT) {
+//正常に新規登録完了した場合
+if ($outputMessage === CORRECT) {
 
     echo '会員登録が完了しました。<br>';
     echo '<a href="loginForm.php">ログインページ</a>';
+
+//新規登録に失敗した場合
+} else {
+
+    //エラー内容に応じてメッセージを表示する。
+    if ($outputMessage === ERROR_POST) {
+
+        echo 'アップロードが失敗しました。<br>';
+        
+    } elseif ($outputMessage === ERROR_NULL) {
+
+        echo '名前、メールアドレスまたはパスワードが空白です。<br>';
+        
+    } elseif ($outputMessage === ERROR_ILLEGAL) {
+
+        echo '名前、メールアドレスまたはパスワードの値が不正です。<br>';
+        
+    } elseif ($outputMessage === ERROR_DIR) {
+
+        echo '保管用ディレクトリを作ることができません。<br>';
+
+    } elseif ($outputMessage === ERROR_MAIL) {
+
+        echo '同じメールアドレスが存在します。<br>';
+    } else {
+
+        echo 'エラーが発生しました<br>';
+    } 
     
+    echo '<a href="signup.php">戻る</a>';
 }
 ?>
 

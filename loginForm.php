@@ -4,68 +4,22 @@
 require_once( dirname(__FILE__). '/define.inc');
 require_once( dirname(__FILE__). '/env.inc');
 
-//データベース関数を使用する
-require_once( dirname(__FILE__). '/DbLib.php');
-$dbLib = new DbLib();
+//セッション関数を使用する
+require_once( dirname(__FILE__). '/SessionLib.php');
+$sessionLib = new SessionLib();
 
 //メッセージ出力用初期化
 $outputMessage = ERROR_POST;
 
+//セッションを開始
+$sessionLib->mySession_start();
 
-//入力されたメールアドレスとパスワードがNULLや空白   
-if (empty($_POST['user_mail']) || empty($_POST['user_pass'])) {
+//ワンタイムチケットを発行してフォームにhiddenでセット
+$ticket = md5(uniqid(rand(), true));
+output_add_rewrite_var('ticket', $ticket);
 
-    $outputMessage === ERROR_NULL;
-
-//入力されたメールアドレスとパスワードが文字列以外    
-} elseif (!is_string($_POST['user_mail']) || !is_string($_POST['user_pass'])) { 
-    $outputMessage = ERROR_ILLEGA;
-        
-} else {
-
-    //セッション開始
-    session_start();
-
-    try {
-    
-        //メールアドレスからusersテーブルを検索した結果を取得する
-        $usersAll = $dbLib->getUsersFromMail($_POST['user_mail']);
-
-        //入力されたメールアドレスに一致する行が存在しない
-        if (empty($usersAll)) {
-        
-            $msg = 'メールアドレスが間違っています。';
-            $outputMessage = ERROR_MAIL;
-        
-        } else {
-        
-            foreach ($usersAll as $users) {
-            
-                //入力されたパスワードが一致しない
-                if (!password_verify($_POST['user_pass'], $users['user_pass'])) {
-
-                    $msg = 'パスワードが間違っています。';   
-                    $outputMessage = ERROR_PASS;
-                    
-                } else {
-                    
-                    //DBのユーザー情報をセッションに保存
-                    $_SESSION['user_id'] = $users['user_id'];
-                    $_SESSION['user_name'] = $users['user_name'];
-
-                    //掲示板に遷移する
-                    header("Location:index.php");
-                    exit();
-                }
-            }
-        }
-        
-    } catch (PDOException $e) {
-    
-        $msg = $e->getMessage();
-    }
-    
-}
+//セッション変数に格納する
+$_SESSION['ticket'] = $ticket;
 
 ?>
 
@@ -84,47 +38,20 @@ if (empty($_POST['user_mail']) || empty($_POST['user_pass'])) {
 ログイン
 </H1>
 <div class="container_signup">
-<div class="item">
-
-<?php
-
-//エラー内容に応じてメッセージを表示する。
-if ($outputMessage === ERROR_NULL) {
-
-    echo 'メールアドレスまたはパスワードが空白です。<br>';
-    
-} elseif ($outputMessage === ERROR_ILLEGAL) {
-
-    echo 'メールアドレスまたはパスワードの値が不正です。<br>';
-
-} elseif ($outputMessage === ERROR_MAIL) {
-
-    echo 'メールアドレスが間違っています。<br>';
-    
-} elseif ($outputMessage === ERROR_PASS) {
-
-    echo 'パスワードが間違っています。<br>';
-    
-} else {
-
-}
-?>
-    
-</div>
 <br>
-<form action="loginForm.php" method="post" name="login">
+<form action="index.php" method="post" name="login">
 
     <div class="item_signup_left">
         <label for="user_mail">メールアドレス：</label>
     </div>
     <div class="item_signup_left">
-        <input type="text" id="user_mail" name="user_mail">
+        <input type="text" id="user_mail" name="user_mail" required>
     </div>
     <div class="item_signup_left">
         <label for="user_pass">パスワード：</label>
     </div>
     <div class="item_signup_left">
-        <input type="text" id="user_pass" name="user_pass">
+        <input type="text" id="user_pass" name="user_pass" required>
     </div>
     <br>
     <div class="item_signup_big">
